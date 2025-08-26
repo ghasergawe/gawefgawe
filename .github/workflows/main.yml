@@ -8,36 +8,6 @@ jobs:
       - name: リポジトリをチェックアウト
         uses: actions/checkout@v4
 
-      - name: WSLをセットアップ (Guacamole用)
-        uses: Vampire/setup-wsl@v2
-        with:
-          distribution: Ubuntu-22.04
-
-      - name: GuacamoleをWSLにインストール
-        run: |
-          wsl -d Ubuntu-22.04 -e sh -c "apt-get update -y && apt-get upgrade -y"
-          wsl -d Ubuntu-22.04 -e sh -c "apt-get install -y vim default-jre default-jdk make maven tomcat9"
-          wsl -d Ubuntu-22.04 -e sh -c "apt-get install -y libcairo2-dev libjpeg-turbo8-dev libpng-dev libtool-bin uuid-dev libossp-uuid-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev freerdp2-dev libpango1.0-dev libssh2-1-dev libtelnet-dev libvncserver-dev libwebsockets-dev libpulse-dev libssl-dev libvorbis-dev libwebp-dev"
-          wsl -d Ubuntu-22.04 -e sh -c "echo 'JAVA_HOME=\"/usr/lib/jvm/java-11-openjdk-amd64\"' >> /etc/environment"
-          wsl -d Ubuntu-22.04 -e sh -c "source /etc/environment"
-          mkdir guacamole
-          cd guacamole
-          Invoke-WebRequest -Uri https://downloads.apache.org/guacamole/1.5.5/source/guacamole-server-1.5.5.tar.gz -OutFile guacamole-server-1.5.5.tar.gz
-          Invoke-WebRequest -Uri https://downloads.apache.org/guacamole/1.5.5/source/guacamole-client-1.5.5.tar.gz -OutFile guacamole-client-1.5.5.tar.gz
-          wsl -d Ubuntu-22.04 -e sh -c "tar -xzf /mnt/$(pwd -W | tr '\\' '/']/guacamole-server-1.5.5.tar.gz"
-          wsl -d Ubuntu-22.04 -e sh -c "cd guacamole-server-1.5.5 && ./configure --with-init-dir=/etc/init.d && make && make install && ldconfig"
-          wsl -d Ubuntu-22.04 -e sh -c "tar -xzf /mnt/$(pwd -W | tr '\\' '/']/guacamole-client-1.5.5.tar.gz"
-          wsl -d Ubuntu-22.04 -e sh -c "cd guacamole-client-1.5.5 && mvn package"
-          wsl -d Ubuntu-22.04 -e sh -c "cp guacamole-client-1.5.5/guacamole/target/guacamole-1.5.5.war /var/lib/tomcat9/webapps/guacamole.war"
-          wsl -d Ubuntu-22.04 -e sh -c "mkdir -p /etc/guacamole/extensions"
-          Invoke-WebRequest -Uri https://downloads.apache.org/guacamole/1.5.5/binary/guacamole-auth-noauth-1.5.5.jar -OutFile noauth.jar
-          wsl -d Ubuntu-22.04 -e sh -c "cp /mnt/$(pwd -W | tr '\\' '/']/noauth.jar /etc/guacamole/extensions/"
-          wsl -d Ubuntu-22.04 -e sh -c "echo '<configs>\n  <config name=\"Windows RDP\">\n    <protocol>rdp</protocol>\n    <param name=\"hostname\">localhost</param>\n    <param name=\"port\">3389</param>\n    <param name=\"username\">mainadmin</param>\n    <param name=\"password\">${{ secrets.RDP_PASSWORD }}</param>\n    <param name=\"ignore-cert\">true</param>\n    <param name=\"color-depth\">16</param>\n    <param name=\"enable-wallpaper\">false</param>\n    <param name=\"enable-theming\">false</param>\n    <param name=\"enable-font-smoothing\">false</param>\n    <param name=\"enable-full-window-drag\">false</param>\n    <param name=\"enable-menu-animations\">false</param>\n    <param name=\"disable-bitmap-caching\">false</param>\n    <param name=\"force-lossless\">false</param>\n    <param name=\"resize-method\">display-update</param>\n  </config>\n</configs>' > /etc/guacamole/noauth-config.xml"
-          wsl -d Ubuntu-22.04 -e sh -c "echo 'guacd-hostname: localhost\nguacd-port: 4822\nnoauth-config: /etc/guacamole/noauth-config.xml' > /etc/guacamole/guacamole.properties"
-          wsl -d Ubuntu-22.04 -e sh -c "ln -s /etc/guacamole/guacamole.properties /usr/share/tomcat9/.guacamole/guacamole.properties"
-          wsl -d Ubuntu-22.04 -e sh -c "systemctl restart tomcat9"
-          wsl -d Ubuntu-22.04 -e sh -c "/etc/init.d/guacd start"
-
       - name: リモートデスクトップを有効化
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
@@ -49,47 +19,65 @@ jobs:
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableAudioRedirection" -value 0 -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fEnableAudioCompression" -value 1 -Force
 
-      - name: ネットワーク最適化（FPS向上を含む追加設定）
+      - name: ネットワーク最適化（遅延減少、FPS向上、ラグ低減）
         run: |
-          # 既存の最適化
+          # 基本最適化
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxBandwidth" -value 0xffffffff -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MinEncryptionLevel" -value 2 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 3 -Type DWORD -Force  # 16-bit color depth for reduced data transfer and lower lag
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 4 -Type DWORD -Force  # 24-bit color
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableWallpaper" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableFullWindowDrag" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableMenuAnims" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableThemes" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableCursorSetting" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "PerfDisableVSync" -value 1 -Type DWORD -Force
+
+          # ネットワーク設定
           netsh int tcp set global autotuninglevel=normal
           netsh int tcp set global chimney=enabled
           netsh int tcp set global dca=enabled
           netsh int tcp set global netdma=enabled
           netsh int tcp set global congestionprovider=ctcp
           netsh interface ipv4 set subinterface "Ethernet" mtu=1500 store=persistent
+          netsh int tcp set global rss=enabled
+          netsh int tcp set global ecncapability=enabled
+          netsh int tcp set global timestamps=disabled  # 低遅延優先
+          netsh int tcp set global rsc=enabled
+          netsh int ip set global taskoffload=enabled
+          netsh int tcp set global initialRto=300
+          netsh int tcp set global fastopen=enabled
+
+          # サービス停止でリソース解放
           Set-Service -Name "SysMain" -StartupType Disabled
           Stop-Service -Name "SysMain" -Force
           Set-Service -Name "WSearch" -StartupType Disabled
           Stop-Service -Name "WSearch" -Force
+          $servicesToDisable = @("DiagTrack", "dmwappushservice", "lfsvc", "MapsBroker", "XblAuthManager", "XblGameSave", "XboxNetApiSvc", "xbgm")
+          foreach ($service in $servicesToDisable) {
+            if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
+              Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
+              Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
+            }
+          }
+
+          # 電源プランをHigh Performanceに
           powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations' -name "DWMFRAMEINTERVAL" -value 5 -Type DWORD -Force
+
+          # FPSとビデオ最適化
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations' -name "DWMFRAMEINTERVAL" -value 15 -Type DWORD -Force  # ~60FPS
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxFPS" -value 60 -Type DWORD -Force  # FPS上限
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "AVCHardwareEncodePreferred" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "PrioritizeH264AVC444" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableVirtualizedGraphics" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableClip" -value 0 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlDisplayBandwidth" -value 200 -Type DWORD -Force  # ディスプレイ優先で調整
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChannelBandwidth" -value 100 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlDisplayBandwidth" -value 255 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChannelBandwidth" -value 255 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChargePostCompression" -value 0 -Type DWORD -Force
-          netsh int tcp set global rss=enabled
-          netsh int tcp set global ecncapability=enabled
-          netsh int tcp set global timestamps=disabled
-          netsh int tcp set global rsc=enabled
-          netsh int ip set global taskoffload=enabled
-          netsh int tcp set global initialRto=200
-          netsh int tcp set global fastopen=enabled
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxCompressionLevel" -value 0 -Type DWORD -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "NetworkThrottlingIndex" -value 0xffffffff -Type DWORD -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "SystemResponsiveness" -value 0 -Type DWORD -Force
+
+          # Delayed ACK無効化と低遅延
           $adapters = Get-NetAdapter | Where-Object {$_.Status -eq "Up"}
           foreach ($adapter in $adapters) {
             $interface = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$($adapter.InterfaceGuid)"
@@ -98,6 +86,8 @@ jobs:
             Set-ItemProperty -Path $interface -name "TcpDelAckTicks" -value 0 -Type DWORD -Force
             Set-ItemProperty -Path $interface -name "TCPNoDelay" -value 1 -Type DWORD -Force
           }
+
+          # ゲーム/マルチメディア優先
           $gamesPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"
           if (-not (Test-Path $gamesPath)) { New-Item -Path $gamesPath -Force }
           Set-ItemProperty -Path $gamesPath -name "Affinity" -value 0 -Type DWORD -Force
@@ -108,17 +98,12 @@ jobs:
           Set-ItemProperty -Path $gamesPath -name "Background Only" -value "False" -Type String -Force
           Set-ItemProperty -Path $gamesPath -name "Clock Rate" -value 10000 -Type DWORD -Force
           Set-ItemProperty -Path $gamesPath -name "Latency Sensitive" -value "True" -Type String -Force
-          $servicesToDisable = @("DiagTrack", "dmwappushservice", "lfsvc", "MapsBroker", "XblAuthManager", "XblGameSave", "TabletInputService", "RetailDemo")
-          foreach ($service in $servicesToDisable) {
-            if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
-              Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
-              Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
-            }
-          }
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "SelectTransport" -value 0 -Type DWORD -Force
+
+          # RDP over UDP優先とビデオ最適化
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "SelectTransport" -value 2 -Type DWORD -Force  # UDP優先
           Enable-NetFirewallRule -DisplayName "Remote Desktop - User Mode (UDP-In)"
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "EnableRemoteFXProgressiveCodec" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualQuality" -value 0 -Type DWORD -Force  # Low quality for speed
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualQuality" -value 1 -Type DWORD -Force  # Medium for speed
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -name "VisualFXSetting" -value 2 -Type DWORD -Force
 
       - name: Windowsオーディオサービスを有効化
@@ -138,6 +123,36 @@ jobs:
           New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
 
+      - name: IISを有効化（ブラウザアクセス用）
+        run: |
+          Enable-WindowsOptionalFeature -Online -FeatureName IIS-WebServerRole -All
+          Enable-WindowsOptionalFeature -Online -FeatureName IIS-WebServer -All
+          Enable-WindowsOptionalFeature -Online -FeatureName IIS-CommonHttpFeatures -All
+          Enable-WindowsOptionalFeature -Online -FeatureName IIS-ApplicationDevelopment -All
+          Enable-WindowsOptionalFeature -Online -FeatureName IIS-NetFxExtensibility45 -All
+          Enable-WindowsOptionalFeature -Online -FeatureName IIS-Security -All
+          Enable-WindowsOptionalFeature -Online -FeatureName IIS-URLAuthorization -All
+          Enable-WindowsOptionalFeature -Online -FeatureName IIS-RequestFiltering -All
+          Enable-WindowsOptionalFeature -Online -FeatureName IIS-Performance -All
+          Enable-WindowsOptionalFeature -Online -FeatureName IIS-ISAPIFilter -All
+          Enable-WindowsOptionalFeature -Online -FeatureName IIS-ISAPIExtensions -All
+          Enable-WindowsOptionalFeature -Online -FeatureName IIS-ASPNET45 -All
+          Restart-Computer -Force  # IIS有効化後再起動必要
+
+      - name: Myrtilleをダウンロード・インストール（ブラウザRDP用）
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/cedrozor/myrtille/releases/latest/download/Myrtille-x64.msi" -OutFile Myrtille.msi
+          msiexec /i Myrtille.msi /quiet /norestart
+          # web.configを編集してデフォルト接続を自動設定（アカウント作成不要）
+          $webConfigPath = "C:\Program Files\Myrtille\Myrtille.Web\web.config"
+          $configContent = Get-Content $webConfigPath -Raw
+          $configContent = $configContent -replace '<appSettings>', '<appSettings><add key="DefaultServer" value="localhost" /><add key="DefaultDomain" value="" /><add key="DefaultUser" value="mainadmin" /><add key="DefaultPassword" value="${{ secrets.RDP_PASSWORD }}" />'
+          Set-Content $webConfigPath $configContent
+          # IISサイト設定
+          Import-Module WebAdministration
+          Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/security/authentication/anonymousAuthentication" -name "enabled" -value "True"
+          Restart-WebAppPool -Name "DefaultAppPool"
+
       - name: Boreツールをダウンロード
         run: |
           Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.5.0/bore-v0.5.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
@@ -147,7 +162,7 @@ jobs:
           } elseif (Test-Path "bore-v0.5.0-x86_64-pc-windows-msvc\bore.exe") {
             Move-Item -Path "bore-v0.5.0-x86_64-pc-windows-msvc\bore.exe" -Destination .
           } elseif (Test-Path "bore.exe") {
-            Write-Output "bore.exeはすでにカレントディレクトリに存在します"
+            Write-Output "bore.exeはすでに存在"
           } else {
             $boreExe = Get-ChildItem -Recurse -Filter "bore.exe" | Select-Object -First 1
             if ($boreExe) {
@@ -157,22 +172,20 @@ jobs:
               exit 1
             }
           }
-          if (-not (Test-Path ".\bore.exe")) {
-            Write-Error "bore.exeの準備に失敗しました"
-            exit 1
-          }
 
-      - name: Boreトンネルを開始 (RDPとGuacamole用)
+      - name: Boreトンネルを開始（RDPとブラウザ用）
         run: |
           Write-Output "RDPユーザー: mainadmin"
-          Write-Output "パスワードはsecretsから取得しています"
+          Write-Output "パスワード: secretsから取得"
+          # RDPトンネル（オプション）
           Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -NoNewWindow
-          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 8080 --to bore.pub" -NoNewWindow
-          Write-Output "ブラウザアクセス: http://bore.pub:<割り当てられたポート>/guacamole (NoAuthで自動接続)"
-          Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
-          
-          # ワークフローを継続的に実行し続けるための無限ループ
+          # ブラウザ用トンネル（Myrtille HTTPポート80）
+          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 80 --to bore.pub" -NoNewWindow
+          Write-Output "ブラウザアクセス: bore.pubの出力URLでアクセス（自動接続）"
+          Write-Output "RDP接続を維持中... キャンセルで終了"
+
+          # 無限ループで維持
           while ($true) {
             Start-Sleep -Seconds 60
-            Write-Output "$(Get-Date): RDP接続を維持中..."
+            Write-Output "$(Get-Date): 接続維持中..."
           }
