@@ -63,6 +63,7 @@ jobs:
           Expand-Archive websockify.zip -DestinationPath . -Force
           Rename-Item -Path "websockify-0.11.0" -NewName "websockify"
           choco install python -y
+          refreshenv
           $htmlContent = @"
           <!DOCTYPE html>
           <html>
@@ -109,12 +110,14 @@ jobs:
       
       - name: Python HTTPサーバーを起動
         run: |
+          refreshenv
           Start-Process python -ArgumentList "-m", "http.server", "8000", "--directory", "./novnc" -NoNewWindow
       
       - name: Websockifyを起動
         run: |
           cd websockify
-          python run.py 6080 localhost:5900 --web ../novnc
+          refreshenv
+          python -m websockify 6080 localhost:5900 --web ../novnc
       
       - name: Boreツールをダウンロード
         run: |
