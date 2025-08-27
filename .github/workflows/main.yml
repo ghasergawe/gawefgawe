@@ -46,7 +46,7 @@ jobs:
           Set-ExecutionPolicy Bypass -Scope Process -Force
           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-          choco install tightvnc python -y
+          choco install tightvnc python3 --version=3.12.4 -y
           Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv
           $vncConfigPath = "$env:ProgramFiles\TightVNC\tvnserver.exe"
@@ -58,6 +58,7 @@ jobs:
       
       - name: numpyをインストール（Websockifyの警告回避）
         run: |
+          python -m pip install --upgrade pip
           python -m pip install numpy
           Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv
@@ -97,16 +98,17 @@ jobs:
                   </div>
                   <div id="vnc" class="vnc-container"></div>
               </div>
-              <script src="novnc/vnc.js"></script>
-              <script>
+              <script type="module">
+                  import RFB from './core/rfb.js';
                   document.getElementById('connectBtn').addEventListener('click', function() {
-                      var rfb = new RFB(document.getElementById('vnc'), 'ws://' + window.location.hostname + '/websockify');
+                      const url = 'ws://' + window.location.host + '/websockify';
+                      const rfb = new RFB(document.getElementById('vnc'), url, { credentials: { password: "${{ secrets.RDP_PASSWORD }}" } });
+                      rfb.resizeSession = true;
                       rfb.addEventListener('connect', function() { console.log("Connected"); });
                       rfb.addEventListener('disconnect', function() { console.log("Disconnected"); });
                       rfb.addEventListener('credentialsrequired', function() {
                           rfb.sendCredentials({ password: "${{ secrets.RDP_PASSWORD }}" });
                       });
-                      rfb.resizeSession = true;
                   });
               </script>
           </body>
@@ -150,10 +152,12 @@ jobs:
           Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -RedirectStandardOutput bore_rdp.log -NoNewWindow
           Start-Process -FilePath ".\bore.exe" -ArgumentList "local 6080 --to bore.pub" -RedirectStandardOutput bore_web.log -NoNewWindow
           Start-Sleep -Seconds 10  # ポート割り当てを待つ
+          $webPort = (Get-Content bore_web.log | Select-String 'listening at bore.pub:' | Select-Object -Last 1).Line -replace '.*bore.pub:', ''
+          $rdpPort = (Get-Content bore_rdp.log | Select-String 'listening at bore.pub:' | Select-Object -Last 1).Line -replace '.*bore.pub:', ''
           Write-Output "RDPユーザー: mainadmin"
           Write-Output "パスワードはsecretsから取得しています"
-          Write-Output "WebアクセスURL (noVNC): http://bore.pub:$(Get-Content bore_web.log | Select-String 'listening at bore.pub:' | ForEach-Object { $_.Line -replace '.*bore.pub:', '' })"
-          Write-Output "RDP接続URL: bore.pub:$(Get-Content bore_rdp.log | Select-String 'listening at bore.pub:' | ForEach-Object { $_.Line -replace '.*bore.pub:', '' }) (ポート3389として接続)"
+          Write-Output "WebアクセスURL (noVNC): http://bore.pub:$webPort"
+          Write-Output "RDP接続URL: bore.pub:$rdpPort (ポート3389として接続)"
           Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
           while ($true) {
             Start-Sleep -Seconds 60
