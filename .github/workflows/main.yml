@@ -28,14 +28,14 @@ jobs:
           # 既存の最適化
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxBandwidth" -value 0xffffffff -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MinEncryptionLevel" -value 2 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 4 -Type DWORD -Force  # 24-bit color depth for reduced data transfer
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 3 -Type DWORD -Force  # 16-bit color for reduced data transfer and latency
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableWallpaper" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableFullWindowDrag" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableMenuAnims" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableThemes" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableCursorSetting" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "PerfDisableVSync" -value 1 -Type DWORD -Force
-          netsh int tcp set global autotuninglevel=normal
+          netsh int tcp set global autotuninglevel=highlyrestricted  # Better for low latency
           netsh int tcp set global chimney=enabled
           netsh int tcp set global dca=enabled
           netsh int tcp set global netdma=enabled
@@ -47,8 +47,8 @@ jobs:
           Stop-Service -Name "WSearch" -Force
           # Set power plan to High Performance for better CPU/GPU utilization
           powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-          # FPS向上のための追加最適化
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations' -name "DWMFRAMEINTERVAL" -value 5 -Type DWORD -Force  # Aim for higher FPS (~200 FPS)
+          # FPS向上のための追加最適化 (60 FPS target for realistic low-latency performance)
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations' -name "DWMFRAMEINTERVAL" -value 15 -Type DWORD -Force
           # H.264/AVC hardware encodingを優先
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "AVCHardwareEncodePreferred" -value 1 -Type DWORD -Force
           # H.264/AVC 444 Graphics modeを優先
@@ -65,9 +65,9 @@ jobs:
           netsh int tcp set global timestamps=disabled  # 低レイテンシのため
           netsh int tcp set global rsc=enabled
           netsh int ip set global taskoffload=enabled
-          netsh int tcp set global initialRto=200  # 再送信タイムアウトをさらに短くしてラグ減少 (reduced to 200ms for lower latency)
+          netsh int tcp set global initialRto=300  # 再送信タイムアウトをさらに短くしてラグ減少 (reduced to 300ms)
           netsh int tcp set global fastopen=enabled
-          # 圧縮レベルを最小化
+          # 圧縮レベルを最小化 (無圧縮 for low latency, assuming sufficient bandwidth)
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxCompressionLevel" -value 0 -Type DWORD -Force
           # Additional performance tweaks for low latency
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "NetworkThrottlingIndex" -value 0xffffffff -Type DWORD -Force
@@ -97,7 +97,7 @@ jobs:
           Set-ItemProperty -Path $gamesPath -name "Clock Rate" -value 10000 -Type DWORD -Force
           Set-ItemProperty -Path $gamesPath -name "Latency Sensitive" -value "True" -Type String -Force
           # Disable additional unnecessary services for performance
-          $servicesToDisable = @("DiagTrack", "dmwappushservice", "lfsvc", "MapsBroker", "XblAuthManager", "XblGameSave", "TabletInputService", "WerSvc", "wuauserv")
+          $servicesToDisable = @("DiagTrack", "dmwappushservice", "lfsvc", "MapsBroker", "XblAuthManager", "XblGameSave", "TabletInputService", "TrkWks")
           foreach ($service in $servicesToDisable) {
             if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
               Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
@@ -113,17 +113,8 @@ jobs:
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualQuality" -value 1 -Type DWORD -Force
           # Disable Visual Effects for performance
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -name "VisualFXSetting" -value 2 -Type DWORD -Force
-          # Additional from TurboRemoteFX and others
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "bEnumerateHWBeforeSW" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VGOptimization_CaptureFrameRate" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VGOptimization_CompressionRatio" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualExperiencePolicy" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations" -name "DWMFRAMEINTERVAL" -value 5 -Type DWORD -Force  # Keep low for high FPS
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableWddmDriver" -value 0 -Type DWORD -Force  # Optional: Disable WDDM for better perf on some GPUs
-          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\TermDD" -name "FlowControlDisable" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -name "InteractiveDelay" -value 0 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters" -name "DisableBandwidthThrottling" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters" -name "DisableLargeMtu" -value 0 -Type DWORD -Force
+          # Disable automatic root certificates update to reduce network checks
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings" -name "CertificateRevocation" -value 0 -Type DWORD -Force
 
       - name: Windowsオーディオサービスを有効化
         run: |
@@ -144,7 +135,7 @@ jobs:
 
       - name: Boreツールをダウンロード
         run: |
-          Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.5.0/bore-v0.5.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip -UseBasicParsing  # UseBasicParsing for faster download
+          Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.5.0/bore-v0.5.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
           Expand-Archive bore.zip -DestinationPath . -Force
           if (Test-Path "bore\bore.exe") {
             Move-Item -Path "bore\bore.exe" -Destination .
@@ -170,7 +161,8 @@ jobs:
         run: |
           Write-Output "RDPユーザー: mainadmin"
           Write-Output "パスワードはsecretsから取得しています"
-          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -NoNewWindow
+          Write-Output "Boreトンネルを開始中..."
+          .\bore.exe local 3389 --to bore.pub
           Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
           # ワークフローを継続的に実行し続けるための無限ループ
           while ($true) {
