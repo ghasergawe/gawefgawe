@@ -108,6 +108,174 @@ jobs:
                       document.getElementById('status').textContent = text;
                   }
                   document.getElementById('connectBtn').addEventListener('click', function() {
+                      const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                      const url = protocol + window.location.host + '/websockify';
+                      setStatus('Connecting to ' + url);
+                      const rfb = new RFB(document.getElementById('vnc'), url, {
+                          credentials: { password: "${{ secrets.RDP_PASSWORD }}" }
+                      });
+                      rfb.addEventListener('connect', function() {
+                          setStatus('Connected');
+                      });
+                      rfb.addEventListener('disconnect', function(e) {
+                          setStatus('Disconnected: ' + (e.detail.clean ? 'Clean' : 'Error'));
+                      });
+                      rfb.resizeSession = true;
+                  });
+              </script>
+          </body>
+          </html>
+          "@
+          Set-Content -Path "./novnc/index.html" -Value $htmlContent
+
+      - name: Websockifyを起動
+        run: |
+          cd websockify
+          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
+          refreshenv
+          Start-Process python -ArgumentList "-m", "websockify", "6080", "localhost:5900", "--web", "../novnc" -NoNewWindow
+
+      - name: ngrokをダウンロード
+        run: |
+          Invoke-WebRequest -Uri https://bin.equinox.io/c/bNyj1mQVY4/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+          Expand-Archive ngrok.zip -DestinationPath . -Force
+          if (-not (Test-Path ".\ngrok.exe")) {
+            Write-Error "ngrok.exeの準備に失敗しました"
+            exit 1
+          }
+
+      - name: ngrok authtokenを設定
+        run: |
+          .\ngrok.exe config add-authtoken "${{ secrets.NGROK_TOKEN }}"
+
+      - name: ngrokトンネルを開始
+        run: |
+          Start-Process .\ngrok.exe -ArgumentList "http 6080" -NoNewWindow
+          Start-Process .\ngrok.exe -ArgumentList "tcp 3389" -NoNewWindow
+          Start-Sleep -Seconds 15  # トンネル確立を待つ
+          $tunnels = Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels"
+          $web_tunnel = $tunnels.tunnels | Where-Object { $_.proto -eq "http" } | Select-Object -First 1
+          $web_url = $web_tunnel.public_url
+          $rdp_tunnel = $tunnels.tunnels | Where-Object { $_.proto -eq "tcp" } | Select-Object -First 1
+          $rdp_url = $rdp_tunnel.public_url -replace "tcp://", ""
+          Write-Output "RDPユーザー: mainadmin"
+          Write-Output "パスワードはsecretsから取得しています"
+          Write-Output "WebアクセスURL (noVNC): $web_url"
+          Write-Output "RDP接続URL: $rdp_url (RDPクライアントで host:port を指定して接続)"
+          Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
+          while ($true) {
+            Start-Sleep -Seconds 60
+            Write-Output "$(Get-Date): RDP接続を維持中..."
+          }name: Windows RDP & Web Access
+
+on: workflow_dispatch
+
+jobs:
+  setup-rdp:
+    runs-on: windows-latest
+    timeout-minutes: 360
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: リモートデスクトップを有効化
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -value 1
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          if (-not (Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services")) { New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -Force }
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fDisableAudioCapture" -value 0 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableAudioRedirection" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableAudioRedirection" -value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fEnableAudioCompression" -value 1 -Force
+
+      - name: ネットワーク最適化（FPS向上を含む追加設定）
+        run: |
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxBandwidth" -value 0xffffffff -Type DWORD -Force
+          # ... (rest of the network optimization commands)
+
+      - name: Windowsオーディオサービスを有効化
+        run: |
+          Set-Service -Name "Audiosrv" -StartupType Automatic
+          Start-Service -Name "Audiosrv"
+          Set-Service -Name "AudioEndpointBuilder" -StartupType Automatic
+          Start-Service -Name "AudioEndpointBuilder"
+
+      - name: RDPユーザーを作成
+        run: |
+          if ($PSVersionTable.PSVersion.Major -ge 7) {
+            $modulePath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\Modules\Microsoft.PowerShell.LocalAccounts"
+            Import-Module $modulePath
+          }
+          $securePassword = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
+          New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
+          Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
+
+      - name: VNCサーバーをインストール
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+          choco install tightvnc python312 -y
+          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
+          refreshenv
+          $vncConfigPath = "$env:ProgramFiles\TightVNC\tvnserver.exe"
+          & $vncConfigPath -setcontrolpassword -password "${{ secrets.RDP_PASSWORD }}"
+          & $vncConfigPath -setviewonlypassword -password "${{ secrets.RDP_PASSWORD }}"
+          & $vncConfigPath -service -install
+          & $vncConfigPath -service -start
+          New-NetFirewallRule -DisplayName "TightVNC" -Direction Inbound -Protocol TCP -LocalPort 5900 -Action Allow
+
+      - name: numpyをインストール（Websockifyの警告回避）
+        run: |
+          python -m pip install numpy
+          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
+          refreshenv
+
+      - name: noVNCをダウンロードと設定
+        run: |
+          Invoke-WebRequest -Uri https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.zip -OutFile novnc.zip
+          Expand-Archive novnc.zip -DestinationPath . -Force
+          Rename-Item -Path "noVNC-1.4.0" -NewName "novnc"
+          Invoke-WebRequest -Uri https://github.com/novnc/websockify/archive/refs/tags/v0.11.0.zip -OutFile websockify.zip
+          Expand-Archive websockify.zip -DestinationPath . -Force
+          Rename-Item -Path "websockify-0.11.0" -NewName "websockify"
+          $htmlContent = @"
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <title>Windows Remote Desktop</title>
+              <meta charset="utf-8">
+              <style>
+                  body { margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f0f0f0; height: 100%; display: flex; flex-direction: column; }
+                  html { height: 100%; }
+                  .container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+                  .info-box { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; max-width: 600px; text-align: center; }
+                  #status { text-align: center; background-color: #6e84a3; color: white; font: bold 12px Helvetica; padding: 6px 5px 4px 5px; border-bottom: 1px outset; }
+                  .vnc-container { flex: 1; overflow: hidden; width: 100%; }
+                  button { background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin: 10px 0; }
+                  button:hover { background-color: #45a049; }
+              </style>
+          </head>
+          <body>
+              <div id="status">Disconnected</div>
+              <div class="container">
+                  <div class="info-box">
+                      <h1>Windows Remote Desktop Access</h1>
+                      <p>このページはGitHub Actionsで自動的に作成されました。</p>
+                      <p>ユーザー名: mainadmin</p>
+                      <p>パスワード: リポジトリのシークレットに設定された値</p>
+                      <p>以下のボタンをクリックしてリモートデスクトップに接続してください。</p>
+                      <button id="connectBtn">VNCで接続</button>
+                  </div>
+                  <div id="vnc" class="vnc-container"></div>
+              </div>
+              <script type="module" crossorigin="anonymous">
+                  import RFB from './core/rfb.js';
+                  function setStatus(text) {
+                      document.getElementById('status').textContent = text;
+                  }
+                  document.getElementById('connectBtn').addEventListener('click', function() {
                       const url = 'ws://' + window.location.host + '/websockify';
                       setStatus('Connecting to ' + url);
                       const rfb = new RFB(document.getElementById('vnc'), url, {
