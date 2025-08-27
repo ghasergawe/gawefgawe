@@ -62,7 +62,6 @@ jobs:
           Invoke-WebRequest -Uri https://github.com/novnc/websockify/archive/refs/tags/v0.11.0.zip -OutFile websockify.zip
           Expand-Archive websockify.zip -DestinationPath . -Force
           Rename-Item -Path "websockify-0.11.0" -NewName "websockify"
-          choco install python -y
           refreshenv
           $htmlContent = @"
           <!DOCTYPE html>
