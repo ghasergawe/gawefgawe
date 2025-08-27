@@ -1,4 +1,4 @@
-name: Windows RDP & Web Access
+name: Windows RDP Access
 on: workflow_dispatch
 jobs:
   setup-rdp:
@@ -7,12 +7,6 @@ jobs:
     steps:
       - name: リポジトリをチェックアウト
         uses: actions/checkout@v4
-      
-      - name: Chocolateyをインストール
-        run: |
-          Set-ExecutionPolicy Bypass -Scope Process -Force
-          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
       
       - name: リモートデスクトップを有効化
         run: |
@@ -67,91 +61,6 @@ jobs:
           New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
       
-      - name: VNCサーバーをインストールと最適化
-        run: |
-          choco install tightvnc python -y --force
-          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
-          refreshenv
-          $vncConfigPath = "$env:ProgramFiles\TightVNC\tvnserver.exe"
-          & $vncConfigPath -setcontrolpassword -password "${{ secrets.RDP_PASSWORD }}"
-          & $vncConfigPath -setviewonlypassword -password "${{ secrets.RDP_PASSWORD }}"
-          # パフォーマンス最適化: 高圧縮、低品質でレイテンシ低減
-          & $vncConfigPath -controlservice -set "CompressionLevel=9" "JpegQualityLevel=5" "AllowTight=1" "LowBandwidth=1" "EnableContinuousUpdates=1"
-          & $vncConfigPath -service -install
-          & $vncConfigPath -service -start
-          New-NetFirewallRule -DisplayName "TightVNC" -Direction Inbound -Protocol TCP -LocalPort 5900 -Action Allow
-      
-      - name: numpyをインストール（Websockifyの警告回避）
-        run: |
-          python -m pip install numpy
-      
-      - name: noVNCをダウンロードと設定
-        run: |
-          Invoke-WebRequest -Uri https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.zip -OutFile novnc.zip
-          Expand-Archive novnc.zip -DestinationPath . -Force
-          Rename-Item -Path "noVNC-1.4.0" -NewName "novnc"
-          Invoke-WebRequest -Uri https://github.com/novnc/websockify/archive/refs/tags/v0.11.0.zip -OutFile websockify.zip
-          Expand-Archive websockify.zip -DestinationPath . -Force
-          Rename-Item -Path "websockify-0.11.0" -NewName "websockify"
-          # noVNCのHTMLを最適化（連続更新サポート追加もし可能）
-          $htmlContent = @"
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Windows Remote Desktop</title>
-              <meta charset="utf-8">
-              <style>
-                  body { margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f0f0f0; }
-                  .container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-                  .info-box { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; max-width: 600px; text-align: center; }
-                  .vnc-container { width: 800px; height: 600px; border: 1px solid #ccc; }
-                  button { background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin: 10px 0; }
-                  button:hover { background-color: #45a049; }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <div class="info-box">
-                      <h1>Windows Remote Desktop Access</h1>
-                      <p>このページはGitHub Actionsで自動的に作成されました。</p>
-                      <p>ユーザー名: mainadmin</p>
-                      <p>パスワード: リポジトリのシークレットに設定された値</p>
-                      <p>以下のボタンをクリックしてリモートデスクトップに接続してください。</p>
-                      <button id="connectBtn">VNCで接続</button>
-                  </div>
-                  <div id="vnc" class="vnc-container"></div>
-              </div>
-              <script src="novnc/core/rfb.js"></script>
-              <script>
-                  document.getElementById('connectBtn').addEventListener('click', function() {
-                      var rfb = new RFB(document.getElementById('vnc'), 'ws://' + window.location.hostname + ':6080/websockify', {
-                          shared: true,
-                          repeaterID: '',
-                          credentials: { password: "${{ secrets.RDP_PASSWORD }}" }
-                      });
-                      rfb.addEventListener('connect', function() { console.log("Connected"); });
-                      rfb.addEventListener('disconnect', function() { console.log("Disconnected"); });
-                      rfb.resizeSession = true;
-                      // レイテンシ低減: 頻繁な更新リクエスト
-                      setInterval(() => { if (rfb) rfb.requestRedraw(); }, 50);
-                  });
-              </script>
-          </body>
-          </html>
-          "@
-          Set-Content -Path "./novnc/index.html" -Value $htmlContent
-      
-      - name: Python HTTPサーバーを起動
-        run: |
-          refreshenv
-          Start-Process python -ArgumentList "-m", "http.server", "8000", "--directory", "./novnc" -NoNewWindow
-      
-      - name: Websockifyを起動
-        run: |
-          cd websockify
-          refreshenv
-          Start-Process python -ArgumentList "-m", "websockify", "6080", "localhost:5900", "--web", "../novnc" -NoNewWindow
-      
       - name: Boreツールをダウンロード
         run: |
           Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.5.0/bore-v0.5.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
@@ -166,19 +75,7 @@ jobs:
           $rdpPort = (Get-Content -Path ".\bore.log" -Tail 1) -replace '.*:(\d+).*', '$1'  # ログからポート抽出（仮定）
           Write-Output "RDP Port: $rdpPort"
           
-          $httpProcess = Start-Process -FilePath ".\bore.exe" -ArgumentList "local 8000 --to bore.pub" -NoNewWindow -PassThru
-          Start-Sleep -Seconds 5
-          $httpPort = (Get-Content -Path ".\bore.log" -Tail 1) -replace '.*:(\d+).*', '$1'
-          Write-Output "HTTP Port: $httpPort"
-          
-          $wsProcess = Start-Process -FilePath ".\bore.exe" -ArgumentList "local 6080 --to bore.pub" -NoNewWindow -PassThru
-          Start-Sleep -Seconds 5
-          $wsPort = (Get-Content -Path ".\bore.log" -Tail 1) -replace '.*:(\d+).*', '$1'
-          Write-Output "Websockify Port: $wsPort"
-          
           Write-Output "RDP接続: bore.pub:$rdpPort (ユーザー: mainadmin, パスワード: secrets)"
-          Write-Output "WebアクセスURL: http://bore.pub:$httpPort"
-          Write-Output "VNC Websockify: ws://bore.pub:$wsPort"
           
           # 維持ループ
           while ($true) {
