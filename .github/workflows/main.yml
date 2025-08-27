@@ -48,7 +48,7 @@ jobs:
           Set-ExecutionPolicy Bypass -Scope Process -Force
           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-          choco install tightvnc python312 ngrok -y
+          choco install tightvnc python312 -y
           Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv
           $vncConfigPath = "$env:ProgramFiles\TightVNC\tvnserver.exe"
@@ -72,6 +72,60 @@ jobs:
           Invoke-WebRequest -Uri https://github.com/novnc/websockify/archive/refs/tags/v0.11.0.zip -OutFile websockify.zip
           Expand-Archive websockify.zip -DestinationPath . -Force
           Rename-Item -Path "websockify-0.11.0" -NewName "websockify"
+          $htmlContent = @"
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <title>Windows Remote Desktop</title>
+              <meta charset="utf-8">
+              <style>
+                  body { margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f0f0f0; height: 100%; display: flex; flex-direction: column; }
+                  html { height: 100%; }
+                  .container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+                  .info-box { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; max-width: 600px; text-align: center; }
+                  #status { text-align: center; background-color: #6e84a3; color: white; font: bold 12px Helvetica; padding: 6px 5px 4px 5px; border-bottom: 1px outset; }
+                  .vnc-container { flex: 1; overflow: hidden; width: 100%; }
+                  button { background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin: 10px 0; }
+                  button:hover { background-color: #45a049; }
+              </style>
+          </head>
+          <body>
+              <div id="status">Disconnected</div>
+              <div class="container">
+                  <div class="info-box">
+                      <h1>Windows Remote Desktop Access</h1>
+                      <p>このページはGitHub Actionsで自動的に作成されました。</p>
+                      <p>ユーザー名: mainadmin</p>
+                      <p>パスワード: リポジトリのシークレットに設定された値</p>
+                      <p>以下のボタンをクリックしてリモートデスクトップに接続してください。</p>
+                      <button id="connectBtn">VNCで接続</button>
+                  </div>
+                  <div id="vnc" class="vnc-container"></div>
+              </div>
+              <script type="module" crossorigin="anonymous">
+                  import RFB from './core/rfb.js';
+                  function setStatus(text) {
+                      document.getElementById('status').textContent = text;
+                  }
+                  document.getElementById('connectBtn').addEventListener('click', function() {
+                      const url = 'ws://' + window.location.host + '/websockify';
+                      setStatus('Connecting to ' + url);
+                      const rfb = new RFB(document.getElementById('vnc'), url, {
+                          credentials: { password: "${{ secrets.RDP_PASSWORD }}" }
+                      });
+                      rfb.addEventListener('connect', function() {
+                          setStatus('Connected');
+                      });
+                      rfb.addEventListener('disconnect', function(e) {
+                          setStatus('Disconnected: ' + (e.detail.clean ? 'Clean' : 'Error'));
+                      });
+                      rfb.resizeSession = true;
+                  });
+              </script>
+          </body>
+          </html>
+          "@
+          Set-Content -Path "./novnc/index.html" -Value $htmlContent
 
       - name: Websockifyを起動
         run: |
@@ -80,34 +134,39 @@ jobs:
           refreshenv
           Start-Process python -ArgumentList "-m", "websockify", "6080", "localhost:5900", "--web", "../novnc" -NoNewWindow
 
-      - name: ngrokを設定とトンネルを開始
+      - name: Boreツールをダウンロード
         run: |
-          ngrok config add-authtoken ${{ secrets.NGROK_AUTHTOKEN }}
-          Start-Process ngrok -ArgumentList "http", "6080", "--log", "ngrok_web.log" -NoNewWindow
-          Start-Process ngrok -ArgumentList "tcp", "3389", "--log", "ngrok_rdp.log" -NoNewWindow
-          Start-Sleep -Seconds 15 # ngrokの起動とログ出力を待つ
-          $web_log_content = Get-Content ngrok_web.log
-          $web_url_match = $web_log_content | Select-String "url=https://.*\.ngrok.*"
-          if ($web_url_match) {
-            $web_url = ($web_url_match[-1].Line -replace '.*url[](https://.*\.ngrok.*?)(\s.*|$)', '$1').Trim()
+          Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.5.0/bore-v0.5.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
+          Expand-Archive bore.zip -DestinationPath . -Force
+          if (Test-Path "bore\bore.exe") {
+            Move-Item -Path "bore\bore.exe" -Destination .
+          } elseif (Test-Path "bore-v0.5.0-x86_64-pc-windows-msvc\bore.exe") {
+            Move-Item -Path "bore-v0.5.0-x86_64-pc-windows-msvc\bore.exe" -Destination .
+          } elseif (Test-Path "bore.exe") {
+            Write-Output "bore.exeはすでにカレントディレクトリに存在します"
           } else {
-            Write-Error "Web URLの抽出に失敗しました"
+            $boreExe = Get-ChildItem -Recurse -Filter "bore.exe" | Select-Object -First 1
+            if ($boreExe) {
+              Move-Item -Path $boreExe.FullName -Destination .
+            } else {
+              Write-Error "bore.exeが見つかりません"
+              exit 1
+            }
+          }
+          if (-not (Test-Path ".\bore.exe")) {
+            Write-Error "bore.exeの準備に失敗しました"
             exit 1
           }
-          $rdp_log_content = Get-Content ngrok_rdp.log
-          $rdp_url_match = $rdp_log_content | Select-String "url=tcp://.*\.ngrok.*:\d+"
-          if ($rdp_url_match) {
-            $rdp_url = ($rdp_url_match[-1].Line -replace '.*url=(tcp://.*\.ngrok.*:\d+)(\s.*|$)', '$1').Trim()
-            $rdp_host = $rdp_url -replace 'tcp://(.*):\d+', '$1'
-            $rdp_port = $rdp_url -replace 'tcp://.*:(\d+)', '$1'
-          } else {
-            Write-Error "RDP URLの抽出に失敗しました"
-            exit 1
-          }
+
+      - name: Boreトンネルを開始
+        run: |
+          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -RedirectStandardOutput bore_rdp.log -NoNewWindow
+          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 6080 --to bore.pub" -RedirectStandardOutput bore_web.log -NoNewWindow
+          Start-Sleep -Seconds 10 # ポート割り当てを待つ
           Write-Output "RDPユーザー: mainadmin"
           Write-Output "パスワードはsecretsから取得しています"
-          Write-Output "WebアクセスURL (noVNC): $web_url/vnc.html?autoconnect=true&password=${{ secrets.RDP_PASSWORD }}&path=websockify"
-          Write-Output "RDP接続: $rdp_host:$rdp_port (ポート3389として接続)"
+          Write-Output "WebアクセスURL (noVNC): http://bore.pub:$(Get-Content bore_web.log | Select-String 'listening at bore.pub:' | ForEach-Object { $_.Line -replace '.*bore.pub:', '' })"
+          Write-Output "RDP接続URL: bore.pub:$(Get-Content bore_rdp.log | Select-String 'listening at bore.pub:' | ForEach-Object { $_.Line -replace '.*bore.pub:', '' }) (ポート3389として接続)"
           Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
           while ($true) {
             Start-Sleep -Seconds 60
