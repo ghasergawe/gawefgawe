@@ -46,7 +46,9 @@ jobs:
           Set-ExecutionPolicy Bypass -Scope Process -Force
           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-          choco install tightvnc -y
+          choco install tightvnc python -y
+          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
+          refreshenv
           $vncConfigPath = "$env:ProgramFiles\TightVNC\tvnserver.exe"
           & $vncConfigPath -setcontrolpassword -password "${{ secrets.RDP_PASSWORD }}"
           & $vncConfigPath -setviewonlypassword -password "${{ secrets.RDP_PASSWORD }}"
@@ -62,7 +64,6 @@ jobs:
           Invoke-WebRequest -Uri https://github.com/novnc/websockify/archive/refs/tags/v0.11.0.zip -OutFile websockify.zip
           Expand-Archive websockify.zip -DestinationPath . -Force
           Rename-Item -Path "websockify-0.11.0" -NewName "websockify"
-          refreshenv
           $htmlContent = @"
           <!DOCTYPE html>
           <html>
@@ -109,12 +110,14 @@ jobs:
       
       - name: Python HTTPサーバーを起動
         run: |
+          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv
           Start-Process python -ArgumentList "-m", "http.server", "8000", "--directory", "./novnc" -NoNewWindow
       
       - name: Websockifyを起動
         run: |
           cd websockify
+          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv
           python -m websockify 6080 localhost:5900 --web ../novnc
       
