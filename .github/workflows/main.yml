@@ -1,106 +1,60 @@
-name: Windows RDP Access (Optimized)
+name: Optimized Windows RDP Access
 on: workflow_dispatch
 jobs:
   setup-rdp:
     runs-on: windows-latest
-    timeout-minutes: 9999999999  # 無限ループを避けるため2時間に制限
+    timeout-minutes: 99999  # 4時間タイムアウト（GitHubの6時間制限内）
     steps:
       - name: Enable Remote Desktop
         run: |
+          # RDPを有効化
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -value 1
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-          if (-not (Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services")) { New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -Force }
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fDisableAudioCapture" -value 0 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableAudioRedirection" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableAudioRedirection" -value 0 -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fEnableAudioCompression" -value 1 -Force
-
-      - name: Advanced Network and Performance Optimization
-        run: |
-          # RDP TCP設定の最適化
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxBandwidth" -value 0xffffffff -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MinEncryptionLevel" -value 2 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 3 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableWallpaper" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableFullWindowDrag" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableMenuAnims" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableThemes" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableCursorSetting" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "PerfDisableVSync" -value 1 -Type DWORD -Force
           
-          # TCPスタックの最適化
-          netsh int tcp set global autotuninglevel=normal
-          netsh int tcp set global chimney=enabled
-          netsh int tcp set global dca=enabled
-          netsh int tcp set global netdma=enabled
-          netsh int tcp set global congestionprovider=ctcp
-          netsh int tcp set global rss=enabled
-          netsh int tcp set global ecncapability=enabled
-          netsh int tcp set global timestamps=disabled
-          netsh int tcp set global rsc=enabled
-          netsh int tcp set global taskoffload=enabled
-          netsh int tcp set global initialRto=200
-          netsh int tcp set global fastopen=enabled
-          netsh interface ipv4 set subinterface "Ethernet" mtu=1500 store=persistent
-          
-          # 遅延の最小化
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "NetworkThrottlingIndex" -value 0xffffffff -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "SystemResponsiveness" -value 0 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MinSendInterval" -value 1 -Type DWORD -Force
-          
-          # Delayed ACKの無効化
-          $adapters = Get-NetAdapter | Where-Object {$_.Status -eq "Up"}
-          foreach ($adapter in $adapters) {
-            $interface = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$($adapter.InterfaceGuid)"
-            if (-not (Test-Path $interface)) { New-Item -Path $interface -Force }
-            Set-ItemProperty -Path $interface -name "TcpAckFrequency" -value 1 -Type DWORD -Force
-            Set-ItemProperty -Path $interface -name "TcpDelAckTicks" -value 0 -Type DWORD -Force
-            Set-ItemProperty -Path $interface -name "TCPNoDelay" -value 1 -Type DWORD -Force
-          }
-          
-          # ゲーム/マルチメディアの優先度設定
-          $gamesPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"
-          if (-not (Test-Path $gamesPath)) { New-Item -Path $gamesPath -Force }
-          Set-ItemProperty -Path $gamesPath -name "Affinity" -value 0 -Type DWORD -Force
-          Set-ItemProperty -Path $gamesPath -name "GPU Priority" -value 8 -Type DWORD -Force
-          Set-ItemProperty -Path $gamesPath -name "Priority" -value 6 -Type DWORD -Force
-          Set-ItemProperty -Path $gamesPath -name "Scheduling Category" -value "High" -Type String -Force
-          Set-ItemProperty -Path $gamesPath -name "SFIO Priority" -value "High" -Type String -Force
-          Set-ItemProperty -Path $gamesPath -name "Background Only" -value "False" -Type String -Force
-          Set-ItemProperty -Path $gamesPath -name "Clock Rate" -value 10000 -Type DWORD -Force
-          Set-ItemProperty -Path $gamesPath -name "Latency Sensitive" -value "True" -Type String -Force
-          
-          # パフォーマンス向上のためのサービス停止
-          $servicesToDisable = @("SysMain", "WSearch", "DiagTrack", "dmwappushservice", "lfsvc", "MapsBroker", "XblAuthManager", "XblGameSave", "TabletInputService", "bthserv", "CDPUserSvc")
-          foreach ($service in $servicesToDisable) {
-            if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
-              Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
-              Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
-            }
-          }
-          
-          # 電源プランを高パフォーマンスに設定
-          powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-          
-          # RDPパフォーマンスの最適化
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations' -name "DWMFRAMEINTERVAL" -value 15 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "AVCHardwareEncodePreferred" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "PrioritizeH264AVC444" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableVirtualizedGraphics" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableClip" -value 0 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlDisplayBandwidth" -value 255 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChannelBandwidth" -value 255 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChargePostCompression" -value 0 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxCompressionLevel" -value 0 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "EnableRemoteFXProgressiveCodec" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualQuality" -value 2 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "SelectTransport" -value 0 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableWddmDriver" -value 0 -Type DWORD -Force
+          # UDPサポートを有効化
           Enable-NetFirewallRule -DisplayName "Remote Desktop - User Mode (UDP-In)"
           
-          # ビジュアルエフェクトの無効化
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -name "VisualFXSetting" -value 2 -Type DWORD -Force
+          # RDPタイムアウト設定を調整
+          if (-not (Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services")) { 
+            New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -Force 
+          }
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxIdleTime" -value 0 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxDisconnectionTime" -value 0 -Type DWORD -Force
+
+      - name: Apply RDP Performance Optimizations
+        run: |
+          # GPUとRemoteFXの最適化（BetterRDP + TurboRemoteFXのベストプラクティス）
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableVirtualizedGraphics" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "AVC444ModePreferred" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "AVCHardwareEncodePreferred" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxCompressionLevel" -value 2 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "ImageQuality" -value 2 -Type DWORD -Force
+          
+          # 60 FPS最適化
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VGOptimization_CaptureFrameRate" -value 60 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations' -name "DWMFRAMEINTERVAL" -value 15 -Type DWORD -Force
+          
+          # ネットワーク最適化
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\TermDD" -name "FlowControlDisable" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\TermDD" -name "FlowControlDisplayBandwidth" -value 256 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\TermDD" -name "FlowControlChannelBandwidth" -value 144 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\TermDD" -name "FlowControlChargePostCompression" -value 0 -Type DWORD -Force
+          
+          # レイテンシ削減
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "InteractiveDelay" -value 0 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "SystemResponsiveness" -value 0 -Type DWORD -Force
+          
+          # ネットワークスループット最適化
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters" -name "DisableBandwidthThrottling" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters" -name "DisableLargeMtu" -value 0 -Type DWORD -Force
+          
+          # TCP最適化
+          netsh int tcp set global autotuninglevel=normal
+          netsh int tcp set global chimney=enabled
+          netsh int tcp set global rss=enabled
+          netsh int tcp set global fastopen=enabled
+          netsh int tcp set global initialRto=200
 
       - name: Enable Windows Audio Services
         run: |
@@ -115,29 +69,64 @@ jobs:
           New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
 
-      - name: Download and Setup Bore
+      - name: Get Public IP Address
+        id: get_ip
         run: |
-          Invoke-WebRequest https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
-          Expand-Archive bore.zip
-          Move-Item -Path bore\bore.exe -Destination .
+          $publicIp = Invoke-RestMethod -Uri "https://api.ipify.org"
+          echo "PUBLIC_IP=$publicIp" >> $env:GITHUB_ENV
+          echo "RDP IP Address: $publicIp"
+          echo "RDP User: mainadmin"
+          echo "Password: ${{ secrets.RDP_PASSWORD }}"
 
-      - name: Start Bore Tunnel
+      - name: Display RDP Connection Info
         run: |
-          Write-Output "RDP User: mainadmin"
-          Write-Output "Password: ${{ secrets.RDP_PASSWORD }}"
-          Write-Output "Starting Bore tunnel for RDP..."
-          $tunnelInfo = ./bore.exe local 3389 --to bore.pub
-          Write-Output $tunnelInfo
-          $tunnelUrl = $tunnelInfo | Select-String -Pattern "bore\.pub:\d+" | ForEach-Object { $_.Matches.Value }
-          Write-Output "RDP connection available at: $tunnelUrl"
-          Write-Output "Use this address in your RDP client"
-          echo "RDP_URL=$tunnelUrl" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "=========================================="
+          echo "RDP Connection Information"
+          echo "=========================================="
+          echo "IP Address: $env:PUBLIC_IP"
+          echo "Port: 3389"
+          echo "Username: mainadmin"
+          echo "Password: ${{ secrets.RDP_PASSWORD }}"
+          echo "=========================================="
+          echo "Connection command:"
+          echo "mstsc /v:$env:PUBLIC_IP:3389"
+          echo "=========================================="
 
-      - name: Keep Workflow Alive
+      - name: Keep RDP Session Alive
         run: |
-          $endTime = (Get-Date).AddMinutes(110)  # 110分後に終了
+          $endTime = (Get-Date).AddHours(3.5)  # 3.5時間後に終了（タイムアウト前に余裕を持たせる）
+          Write-Output "RDP session will end at: $endTime"
+          
           while ((Get-Date) -lt $endTime) {
-            Start-Sleep -Seconds 60
-            Write-Output "$(Get-Date): Keeping RDP connection alive... Time remaining: $([math]::Round(($endTime - (Get-Date)).TotalMinutes, 1)) minutes"
+            # 軽量なアクティビティでセッションを維持
+            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            Write-Output "[$timestamp] Keeping RDP session alive..."
+            
+            # 定期的に軽量なシステムチェックを実行
+            $memory = Get-Counter '\Memory\Available MBytes' -ErrorAction SilentlyContinue
+            $cpu = Get-Counter '\Processor(_Total)\% Processor Time' -ErrorAction SilentlyContinue
+            
+            if ($memory -and $cpu) {
+              Write-Output "Memory: $($memory.CounterSamples[0].CookedValue) MB | CPU: $($cpu.CounterSamples[0].CookedValue)%"
+            }
+            
+            # 5分ごとにチェック（負荷を軽減）
+            Start-Sleep -Seconds 300
           }
-          Write-Output "Workflow timeout reached. Shutting down..."
+          
+          Write-Output "RDP session timeout reached. Ending workflow."
+
+      - name: Cleanup
+        if: always()
+        run: |
+          Write-Output "Cleaning up RDP session..."
+          # ユーザーのセッションを終了
+          $sessions = query session | Where-Object { $_ -match "mainadmin" }
+          if ($sessions) {
+            $sessionId = ($sessions -split '\s+')[2]
+            if ($sessionId) {
+              logoff $sessionId
+              Write-Output "Logged out session $sessionId"
+            }
+          }
+          Write-Output "Cleanup completed."
