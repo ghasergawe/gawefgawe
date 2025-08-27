@@ -1,9 +1,9 @@
-name: Windows RDP Access
+name: Windows RDP Access (Optimized)
 on: workflow_dispatch
 jobs:
   setup-rdp:
     runs-on: windows-latest
-    timeout-minutes: 360
+    timeout-minutes: 9999999999  # 無限ループを避けるため2時間に制限
     steps:
       - name: Enable Remote Desktop
         run: |
@@ -16,56 +16,40 @@ jobs:
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableAudioRedirection" -value 0 -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fEnableAudioCompression" -value 1 -Force
 
-      - name: Network and Performance Optimization
+      - name: Advanced Network and Performance Optimization
         run: |
-          # Existing optimizations
+          # RDP TCP設定の最適化
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxBandwidth" -value 0xffffffff -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MinEncryptionLevel" -value 2 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 3 -Type DWORD -Force # Changed to 24-bit for balance between quality and reduced data transfer (previously 4 for 32-bit)
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 3 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableWallpaper" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableFullWindowDrag" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableMenuAnims" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableThemes" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableCursorSetting" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "PerfDisableVSync" -value 1 -Type DWORD -Force
+          
+          # TCPスタックの最適化
           netsh int tcp set global autotuninglevel=normal
           netsh int tcp set global chimney=enabled
           netsh int tcp set global dca=enabled
           netsh int tcp set global netdma=enabled
           netsh int tcp set global congestionprovider=ctcp
-          netsh interface ipv4 set subinterface "Ethernet" mtu=1500 store=persistent
-          Set-Service -Name "SysMain" -StartupType Disabled
-          Stop-Service -Name "SysMain" -Force
-          Set-Service -Name "WSearch" -StartupType Disabled
-          Stop-Service -Name "WSearch" -Force
-          # Set power plan to High Performance
-          powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-          # FPS optimization: Set to 60 FPS (DWMFRAMEINTERVAL=15 for ~60 FPS, more realistic than 200)
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations' -name "DWMFRAMEINTERVAL" -value 15 -Type DWORD -Force
-          # H.264/AVC hardware encoding priority
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "AVCHardwareEncodePreferred" -value 1 -Type DWORD -Force
-          # H.264/AVC 444 Graphics mode priority
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "PrioritizeH264AVC444" -value 1 -Type DWORD -Force
-          # GPU acceleration and RemoteFX
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableVirtualizedGraphics" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableClip" -value 0 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlDisplayBandwidth" -value 255 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChannelBandwidth" -value 255 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChargePostCompression" -value 0 -Type DWORD -Force
-          # Additional network optimizations
           netsh int tcp set global rss=enabled
           netsh int tcp set global ecncapability=enabled
           netsh int tcp set global timestamps=disabled
           netsh int tcp set global rsc=enabled
-          netsh int ip set global taskoffload=enabled
-          netsh int tcp set global initialRto=200 # Reduced further to 200ms for lower latency
+          netsh int tcp set global taskoffload=enabled
+          netsh int tcp set global initialRto=200
           netsh int tcp set global fastopen=enabled
-          # Minimize compression
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxCompressionLevel" -value 0 -Type DWORD -Force
-          # Low latency tweaks
+          netsh interface ipv4 set subinterface "Ethernet" mtu=1500 store=persistent
+          
+          # 遅延の最小化
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "NetworkThrottlingIndex" -value 0xffffffff -Type DWORD -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "SystemResponsiveness" -value 0 -Type DWORD -Force
-          # Disable delayed ACK
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MinSendInterval" -value 1 -Type DWORD -Force
+          
+          # Delayed ACKの無効化
           $adapters = Get-NetAdapter | Where-Object {$_.Status -eq "Up"}
           foreach ($adapter in $adapters) {
             $interface = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$($adapter.InterfaceGuid)"
@@ -74,7 +58,8 @@ jobs:
             Set-ItemProperty -Path $interface -name "TcpDelAckTicks" -value 0 -Type DWORD -Force
             Set-ItemProperty -Path $interface -name "TCPNoDelay" -value 1 -Type DWORD -Force
           }
-          # Game/multimedia priority
+          
+          # ゲーム/マルチメディアの優先度設定
           $gamesPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"
           if (-not (Test-Path $gamesPath)) { New-Item -Path $gamesPath -Force }
           Set-ItemProperty -Path $gamesPath -name "Affinity" -value 0 -Type DWORD -Force
@@ -85,26 +70,37 @@ jobs:
           Set-ItemProperty -Path $gamesPath -name "Background Only" -value "False" -Type String -Force
           Set-ItemProperty -Path $gamesPath -name "Clock Rate" -value 10000 -Type DWORD -Force
           Set-ItemProperty -Path $gamesPath -name "Latency Sensitive" -value "True" -Type String -Force
-          # Disable more services
-          $servicesToDisable = @("DiagTrack", "dmwappushservice", "lfsvc", "MapsBroker", "XblAuthManager", "XblGameSave", "TabletInputService", "bthserv", "CDPUserSvc")
+          
+          # パフォーマンス向上のためのサービス停止
+          $servicesToDisable = @("SysMain", "WSearch", "DiagTrack", "dmwappushservice", "lfsvc", "MapsBroker", "XblAuthManager", "XblGameSave", "TabletInputService", "bthserv", "CDPUserSvc")
           foreach ($service in $servicesToDisable) {
             if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
               Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
               Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
             }
           }
-          # Enable RDP over UDP (though tunneling may limit this)
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "SelectTransport" -value 0 -Type DWORD -Force
-          Enable-NetFirewallRule -DisplayName "Remote Desktop - User Mode (UDP-In)"
-          # RemoteFX Progressive Codec
+          
+          # 電源プランを高パフォーマンスに設定
+          powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+          
+          # RDPパフォーマンスの最適化
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations' -name "DWMFRAMEINTERVAL" -value 15 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "AVCHardwareEncodePreferred" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "PrioritizeH264AVC444" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableVirtualizedGraphics" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableClip" -value 0 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlDisplayBandwidth" -value 255 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChannelBandwidth" -value 255 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChargePostCompression" -value 0 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxCompressionLevel" -value 0 -Type DWORD -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "EnableRemoteFXProgressiveCodec" -value 1 -Type DWORD -Force
-          # Visual Quality to Lossless for quality, but medium for speed if needed
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualQuality" -value 2 -Type DWORD -Force # 1=Medium, 2=High, 3=Lossless; High for balance
-          # Disable Visual Effects
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualQuality" -value 2 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "SelectTransport" -value 0 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableWddmDriver" -value 0 -Type DWORD -Force
+          Enable-NetFirewallRule -DisplayName "Remote Desktop - User Mode (UDP-In)"
+          
+          # ビジュアルエフェクトの無効化
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -name "VisualFXSetting" -value 2 -Type DWORD -Force
-          # Additional from BetterRDP: Reduce artificial latency
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MinSendInterval" -value 5 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableWddmDriver" -value 0 -Type DWORD -Force # Optional: Use XDDM for better perf on some GPUs
 
       - name: Enable Windows Audio Services
         run: |
@@ -119,24 +115,29 @@ jobs:
           New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
 
-      - name: Download and Setup ngrok (replaced Bore for lower latency global network)
+      - name: Download and Setup Bore
         run: |
-          Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
-          Expand-Archive ngrok.zip
-          Move-Item -Path ngrok\ngrok.exe -Destination .
-          ./ngrok.exe authtoken ${{ secrets.NGROK_AUTHTOKEN }}
+          Invoke-WebRequest https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
+          Expand-Archive bore.zip
+          Move-Item -Path bore\bore.exe -Destination .
 
-      - name: Start ngrok Tunnel
+      - name: Start Bore Tunnel
         run: |
           Write-Output "RDP User: mainadmin"
-          Write-Output "Password retrieved from secrets"
-          Start-Process -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389 --region=us" -NoNewWindow # Use a low-latency region like 'us'; adjust based on location
-          Write-Output "RDP connection active... Cancel workflow manually"
+          Write-Output "Password: ${{ secrets.RDP_PASSWORD }}"
+          Write-Output "Starting Bore tunnel for RDP..."
+          $tunnelInfo = ./bore.exe local 3389 --to bore.pub
+          Write-Output $tunnelInfo
+          $tunnelUrl = $tunnelInfo | Select-String -Pattern "bore\.pub:\d+" | ForEach-Object { $_.Matches.Value }
+          Write-Output "RDP connection available at: $tunnelUrl"
+          Write-Output "Use this address in your RDP client"
+          echo "RDP_URL=$tunnelUrl" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      # Infinite loop to keep workflow running
       - name: Keep Workflow Alive
         run: |
-          while ($true) {
-            Start-Sleep -Seconds 30 # Reduced sleep interval for more responsive checks
-            Write-Output "$(Get-Date): Keeping RDP connection alive..."
+          $endTime = (Get-Date).AddMinutes(110)  # 110分後に終了
+          while ((Get-Date) -lt $endTime) {
+            Start-Sleep -Seconds 60
+            Write-Output "$(Get-Date): Keeping RDP connection alive... Time remaining: $([math]::Round(($endTime - (Get-Date)).TotalMinutes, 1)) minutes"
           }
+          Write-Output "Workflow timeout reached. Shutting down..."
