@@ -56,6 +56,10 @@ jobs:
           & $vncConfigPath -service -start
           New-NetFirewallRule -DisplayName "TightVNC" -Direction Inbound -Protocol TCP -LocalPort 5900 -Action Allow
       
+      - name: numpyをインストール（Websockifyの警告回避）
+        run: |
+          python -m pip install numpy
+      
       - name: noVNCをダウンロードと設定
         run: |
           Invoke-WebRequest -Uri https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.zip -OutFile novnc.zip
@@ -119,7 +123,7 @@ jobs:
           cd websockify
           Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv
-          python -m websockify 6080 localhost:5900 --web ../novnc
+          Start-Process python -ArgumentList "-m", "websockify", "6080", "localhost:5900", "--web", "../novnc" -NoNewWindow
       
       - name: Boreツールをダウンロード
         run: |
