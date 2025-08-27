@@ -7,7 +7,7 @@ jobs:
     steps:
       - name: リポジトリをチェックアウト
         uses: actions/checkout@v4
-      
+     
       - name: リモートデスクトップを有効化
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
@@ -18,19 +18,19 @@ jobs:
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableAudioRedirection" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableAudioRedirection" -value 0 -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fEnableAudioCompression" -value 1 -Force
-      
+     
       - name: ネットワーク最適化（FPS向上を含む追加設定）
         run: |
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxBandwidth" -value 0xffffffff -Type DWORD -Force
           # ... (rest of the network optimization commands)
-      
+     
       - name: Windowsオーディオサービスを有効化
         run: |
           Set-Service -Name "Audiosrv" -StartupType Automatic
           Start-Service -Name "Audiosrv"
           Set-Service -Name "AudioEndpointBuilder" -StartupType Automatic
           Start-Service -Name "AudioEndpointBuilder"
-      
+     
       - name: RDPユーザーを作成
         run: |
           if ($PSVersionTable.PSVersion.Major -ge 7) {
@@ -40,13 +40,13 @@ jobs:
           $securePassword = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
           New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
-      
+     
       - name: VNCサーバーをインストール
         run: |
           Set-ExecutionPolicy Bypass -Scope Process -Force
           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-          choco install tightvnc python3 --version=3.12.4 -y
+          choco install tightvnc python312 -y
           Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv
           $vncConfigPath = "$env:ProgramFiles\TightVNC\tvnserver.exe"
@@ -55,14 +55,13 @@ jobs:
           & $vncConfigPath -service -install
           & $vncConfigPath -service -start
           New-NetFirewallRule -DisplayName "TightVNC" -Direction Inbound -Protocol TCP -LocalPort 5900 -Action Allow
-      
+     
       - name: numpyをインストール（Websockifyの警告回避）
         run: |
-          python -m pip install --upgrade pip
           python -m pip install numpy
           Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv
-      
+     
       - name: noVNCをダウンロードと設定
         run: |
           Invoke-WebRequest -Uri https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.zip -OutFile novnc.zip
@@ -98,31 +97,30 @@ jobs:
                   </div>
                   <div id="vnc" class="vnc-container"></div>
               </div>
-              <script type="module">
-                  import RFB from './core/rfb.js';
+              <script src="core/rfb.js"></script>
+              <script>
                   document.getElementById('connectBtn').addEventListener('click', function() {
-                      const url = 'ws://' + window.location.host + '/websockify';
-                      const rfb = new RFB(document.getElementById('vnc'), url, { credentials: { password: "${{ secrets.RDP_PASSWORD }}" } });
-                      rfb.resizeSession = true;
+                      var rfb = new RFB(document.getElementById('vnc'), 'ws://' + window.location.host + '/websockify');
                       rfb.addEventListener('connect', function() { console.log("Connected"); });
                       rfb.addEventListener('disconnect', function() { console.log("Disconnected"); });
                       rfb.addEventListener('credentialsrequired', function() {
                           rfb.sendCredentials({ password: "${{ secrets.RDP_PASSWORD }}" });
                       });
+                      rfb.resizeSession = true;
                   });
               </script>
           </body>
           </html>
           "@
           Set-Content -Path "./novnc/index.html" -Value $htmlContent
-      
+     
       - name: Websockifyを起動
         run: |
           cd websockify
           Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv
           Start-Process python -ArgumentList "-m", "websockify", "6080", "localhost:5900", "--web", "../novnc" -NoNewWindow
-      
+     
       - name: Boreツールをダウンロード
         run: |
           Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.5.0/bore-v0.5.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
@@ -146,18 +144,16 @@ jobs:
             Write-Error "bore.exeの準備に失敗しました"
             exit 1
           }
-      
+     
       - name: Boreトンネルを開始
         run: |
           Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -RedirectStandardOutput bore_rdp.log -NoNewWindow
           Start-Process -FilePath ".\bore.exe" -ArgumentList "local 6080 --to bore.pub" -RedirectStandardOutput bore_web.log -NoNewWindow
-          Start-Sleep -Seconds 10  # ポート割り当てを待つ
-          $webPort = (Get-Content bore_web.log | Select-String 'listening at bore.pub:' | Select-Object -Last 1).Line -replace '.*bore.pub:', ''
-          $rdpPort = (Get-Content bore_rdp.log | Select-String 'listening at bore.pub:' | Select-Object -Last 1).Line -replace '.*bore.pub:', ''
+          Start-Sleep -Seconds 10 # ポート割り当てを待つ
           Write-Output "RDPユーザー: mainadmin"
           Write-Output "パスワードはsecretsから取得しています"
-          Write-Output "WebアクセスURL (noVNC): http://bore.pub:$webPort"
-          Write-Output "RDP接続URL: bore.pub:$rdpPort (ポート3389として接続)"
+          Write-Output "WebアクセスURL (noVNC): http://bore.pub:$(Get-Content bore_web.log | Select-String 'listening at bore.pub:' | ForEach-Object { $_.Line -replace '.*bore.pub:', '' })"
+          Write-Output "RDP接続URL: bore.pub:$(Get-Content bore_rdp.log | Select-String 'listening at bore.pub:' | ForEach-Object { $_.Line -replace '.*bore.pub:', '' }) (ポート3389として接続)"
           Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
           while ($true) {
             Start-Sleep -Seconds 60
