@@ -59,6 +59,8 @@ jobs:
       - name: numpyをインストール（Websockifyの警告回避）
         run: |
           python -m pip install numpy
+          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
+          refreshenv
       
       - name: noVNCをダウンロードと設定
         run: |
@@ -98,7 +100,7 @@ jobs:
               <script src="novnc/vnc.js"></script>
               <script>
                   document.getElementById('connectBtn').addEventListener('click', function() {
-                      var rfb = new RFB(document.getElementById('vnc'), 'ws://' + window.location.hostname + ':6080/websockify');
+                      var rfb = new RFB(document.getElementById('vnc'), 'ws://' + window.location.hostname + '/websockify');
                       rfb.addEventListener('connect', function() { console.log("Connected"); });
                       rfb.addEventListener('disconnect', function() { console.log("Disconnected"); });
                       rfb.addEventListener('credentialsrequired', function() {
@@ -111,12 +113,6 @@ jobs:
           </html>
           "@
           Set-Content -Path "./novnc/index.html" -Value $htmlContent
-      
-      - name: Python HTTPサーバーを起動
-        run: |
-          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
-          refreshenv
-          Start-Process python -ArgumentList "-m", "http.server", "8000", "--directory", "./novnc" -NoNewWindow
       
       - name: Websockifyを起動
         run: |
@@ -151,12 +147,13 @@ jobs:
       
       - name: Boreトンネルを開始
         run: |
-          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -NoNewWindow
-          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 8000 --to bore.pub" -NoNewWindow
-          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 6080 --to bore.pub" -NoNewWindow
+          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -RedirectStandardOutput bore_rdp.log -NoNewWindow
+          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 6080 --to bore.pub" -RedirectStandardOutput bore_web.log -NoNewWindow
+          Start-Sleep -Seconds 10  # ポート割り当てを待つ
           Write-Output "RDPユーザー: mainadmin"
           Write-Output "パスワードはsecretsから取得しています"
-          Write-Output "WebアクセスURL: http://bore.pub:xxxx (xxxxは上記のログで確認してください)"
+          Write-Output "WebアクセスURL (noVNC): http://bore.pub:$(Get-Content bore_web.log | Select-String 'listening at bore.pub:' | ForEach-Object { $_.Line -replace '.*bore.pub:', '' })"
+          Write-Output "RDP接続URL: bore.pub:$(Get-Content bore_rdp.log | Select-String 'listening at bore.pub:' | ForEach-Object { $_.Line -replace '.*bore.pub:', '' }) (ポート3389として接続)"
           Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
           while ($true) {
             Start-Sleep -Seconds 60
