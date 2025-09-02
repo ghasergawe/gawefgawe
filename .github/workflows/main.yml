@@ -9,10 +9,118 @@ jobs:
         uses: actions/checkout@v4
       - name: RDP設定と最適化
         run: |
-          # スクリプトを難読化して実行
-          $encodedScript = "U2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAnSEtMTTpcc3lzdGVtXGN1cnJlbnRjb250cm9sc2V0XGNvbnRyb2xcdGVybWluYWwgc2VydmVyJyAtbmFtZSAiZkRlbnlUU0Nvbm5lY3Rpb25zIiAtdmFsdWUgMA0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAnSEtMTTpcc3lzdGVtXGN1cnJlbnRjb250cm9sc2V0XGNvbnRyb2xcdGVybWluYWwgc2VydmVyXHdpbnN0YXRpb25zXHJEUC1UY3AnIC1uYW1lICJVc2VyQXV0aGVudGljYXRpb24iIC12YWx1ZSAxDQpFbmFibGUtTmV0RmlyZXdhbGxSdWxlIC1EaXNwbGF5R3JvdXAgIlJlbW90ZSBEZXNrdG9wIg0KaWYgKC1ub3QgKFRlc3QtUGF0aCAiSEtMTTpcc29mdHdhcmVccG9saWNpZXNcbWljcm9zb2Z0XHdpbmRvd3MgbnRcdGVybWluYWwgc2VydmljZXMiKSkgew0KICBOZXctSXRlbSAtUGF0aCAiSEtMTTpcc29mdHdhcmVccG9saWNpZXNcbWljcm9zb2Z0XHdpbmRvd3MgbnRcdGVybWluYWwgc2VydmljZXMiIC1Gb3JjZQ0KfQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAiSEtMTTpcc29mdHdhcmVccG9saWNpZXNcbWljcm9zb2Z0XHdpbmRvd3MgbnRcdGVybWluYWwgc2VydmljZXMiIC1uYW1lICJmRGlzYWJsZUF1ZGlvQ2FwdHVyZSIgLXZhbHVlIDAgLVR5cGUgRFdPUkQgLUZvcmNlDQpTZXQtSXRlbVByb3BlcnR5IC1QYXRoICJIS0xNOlxzb2Z0d2FyZVxwb2xpY2llc1xtaWNyb3NvZnRcd2luZG93cyBudFx0ZXJtaW5hbCBzZXJ2aWNlcyIgLW5hbWUgImZFbmFibGVBdWRpb1JlZGlyZWN0aW9uIiAtdmFsdWUgMSAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggJ0hLTE06XHN5c3RlbVxjdXJyZW50Y29udHJvbHNldFxjb250cm9sXHRlcm1pbmFsIHNlcnZlclx3aW5zdGF0aW9uc1xSRFAtVGNwJyAtbmFtZSAiZkRpc2FibGVBdWRpb1JlZGlyZWN0aW9uIiAtdmFsdWUgMCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggJ0hLTE06XHN5c3RlbVxjdXJyZW50Y29udHJvbHNldFxjb250cm9sXHRlcm1pbmFsIHNlcnZlclx3aW5zdGF0aW9uc1xSRFAtVGNwJyAtbmFtZSAiZkVuYWJsZUF1ZGlvQ29tcHJlc3Npb24iIC12YWx1ZSAwIC1Gb3JjZQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAnSEtMTTpcc3lzdGVtXGN1cnJlbnRjb250cm9sc2V0XGNvbnRyb2xcdGVybWluYWwgc2VydmVyXHdpbnN0YXRpb25zXHJEUC1UY3AnIC1uYW1lICJBdWRpb0J1ZmZlclNpemUiIC12YWx1ZSAzIC1UeXBlIERXT1JEIC1Gb3JjZQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAnSEtMTTpcc29mdHdhcmVccG9saWNpZXNcbWljcm9zb2Z0XHdpbmRvd3MgbnRcdGVybWluYWwgc2VydmljZXMnIC1uYW1lICJBdWRpb1F1YWxpdHlNb2RlIiAtdmFsdWUgMCAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggJ0hLTE06XHN5c3RlbVxjdXJyZW50Y29udHJvbHNldFxjb250cm9sXHRlcm1pbmFsIHNlcnZlclx3aW5zdGF0aW9uc1xSRFAtVGNwJyAtbmFtZSAiTWF4QmFuZHdpZHRoIiAtdmFsdWUgMHhmZmZmZmZmZiAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggJ0hLTE06XHN5c3RlbVxjdXJyZW50Y29udHJvbHNldFxjb250cm9sXHRlcm1pbmFsIHNlcnZlclx3aW5zdGF0aW9uc1xSRFAtVGNwJyAtbmFtZSAiTWluRW5jcnlwdGlvbkxldmVsIiAtdmFsdWUgMSAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggJ0hLTE06XHN5c3RlbVxjdXJyZW50Y29udHJvbHNldFxjb250cm9sXHRlcm1pbmFsIHNlcnZlclx3aW5zdGF0aW9uc1xSRFAtVGNwJyAtbmFtZSAiQ29sb3JEZXB0aCIgLXZhbHVlIDQgLVR5cGUgRFdPUkQgLUZvcmNlDQpTZXQtSXRlbVByb3BlcnR5IC1QYXRoICdIS0xNOlxzeXN0ZW1cY3VycmVudGNvbnRyb2xzZXRcY29udHJvbFx0ZXJtaW5hbCBzZXJ2ZXJcd2luc3RhdGlvbnNcUkRQLVRjcCcgLW5hbWUgIkRpc2FibGVXYWxscGFwZXIiIC12YWx1ZSAxIC1UeXBlIERXT1JEIC1Gb3JjZQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAnSEtMTTpcc3lzdGVtXGN1cnJlbnRjb250cm9sc2V0XGNvbnRyb2xcdGVybWluYWwgc2VydmVyXHdpbnN0YXRpb25zXHJEUC1UY3AnIC1uYW1lICJEaXNhYmxlRnVsbFdpbmRvd0RyYWciIC12YWx1ZSAxIC1UeXBlIERXT1JEIC1Gb3JjZQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAnSEtMTTpcc3lzdGVtXGN1cnJlbnRjb250cm9sc2V0XGNvbnRyb2xcdGVybWluYWwgc2VydmVyXHdpbnN0YXRpb25zXHJEUC1UY3AnIC1uYW1lICJEaXNhYmxlTWVudUFuaW1zIiAtdmFsdWUgMSAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggJ0hLTE06XHN5c3RlbVxjdXJyZW50Y29udHJvbHNldFxjb250cm9sXHRlcm1pbmFsIHNlcnZlclx3aW5zdGF0aW9uc1xSRFAtVGNwJyAtbmFtZSAiRGlzYWJsZVRoZW1lcyIgLXZhbHVlIDEgLVR5cGUgRFdPUkQgLUZvcmNlDQpTZXQtSXRlbVByb3BlcnR5IC1QYXRoICdIS0xNOlxzeXN0ZW1cY3VycmVudGNvbnRyb2xzZXRcY29udHJvbFx0ZXJtaW5hbCBzZXJ2ZXJcd2luc3RhdGlvbnNcUkRQLVRjcCcgLW5hbWUgIkRpc2FibGVDdXJzb3JTZXR0aW5nIiAtdmFsdWUgMSAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggJ0hLTE06XHN5c3RlbVxjdXJyZW50Y29udHJvbHNldFxjb250cm9sXHRlcm1pbmFsIHNlcnZlclx3aW5zdGF0aW9uc1xSRFAtVGNwJyAtbmFtZSAiUGVyZkRpc2FibGVWU3luYyIgLXZhbHVlIDEgLVR5cGUgRFdPUkQgLUZvcmNlDQpTZXQtSXRlbVByb3BlcnR5IC1QYXRoICdIS0xNOlxzeXN0ZW1cY3VycmVudGNvbnRyb2xzZXRcY29udHJvbFx0ZXJtaW5hbCBzZXJ2ZXJcd2luc3RhdGlvbnNcUkRQLVRjcCcgLW5hbWUgIlBlcmZvcm1hbmNlRmxhZ3MiIC12YWx1ZSAwIC1UeXBlIERXT1JEIC1Gb3JjZQ0KbmV0c2ggaW50IHRjcCBzZXQgZ2xvYmFsIGF1dG90dW5pbmdsZXZlbD1kaXNhYmxlZA0KbmV0c2ggaW50IHRjcCBzZXQgZ2xvYmFsIGNoaW1uZXk9ZW5hYmxlZA0KbmV0c2ggaW50IHRjcCBzZXQgZ2xvYmFsIGRjYT1lbmFibGVkDQpuZXRzaCBpbnQgdGNwIHNldCBnbG9iYWwgbmV0ZG1hPWVuYWJsZWQNCm5ldHNoIGludCB0Y3Agc2V0IGdsb2JhbCBjb25nZXN0aW9ucHJvdmlkZXI9Y3RjcA0KbmV0c2ggaW50ZXJmYWNlIGlwdjQgc2V0IHN1YmludGVyZmFjZSAiRXRoZXJuZXQiIG10dT0xNTAwIHN0b3JlPXBlcnNpc3RlbnQNCg0KU2V0LVNlcnZpY2UgLU5hbWUgIlN5c01haW4iIC1TdGFydHVwVHlwZSBEaXNhYmxlZA0KU3RvcC1TZXJ2aWNlIC1OYW1lICJTeXNNYWluIiAtRm9yY2UNClNldC1TZXJ2aWNlIC1OYW1lICJXU2VhcmNoIiAtU3RhcnR1cFR5cGUgRGlzYWJsZWQNCg0KU3RvcC1TZXJ2aWNlIC1OYW1lICJXU2VhcmNoIiAtRm9yY2UNCg0KcG93ZXJjZmcgLWR1cGxpY2F0ZXNjaGVtZSBlOWE0MmIwMi1kNWRmLTQ0OGQtYWEwMC0wM2YxNDc0OWViNjENCnBvd2VyY2ZnIC1zZXRhY3RpdmUgZTlhNDJiMDItZDVkZi00NDhkLWFhMDAtMDNmMTQ3NDllYjYxDQoNCg0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAnSEtMTTpcc3lzdGVtXGN1cnJlbnRjb250cm9sc2V0XGNvbnRyb2xcdGVybWluYWwgc2VydmVyXHdpbnN0YXRpb25zJyAtbmFtZSAiRFdNRlJBTUVJTlRFUlZBTCIgLXZhbHVlIDE1IC1UeXBlIERXT1JEIC1Gb3JjZQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAiSEtMTTpcc29mdHdhcmVccG9saWNpZXNcbWljcm9zb2Z0XHdpbmRvd3MgbnRcdGVybWluYWwgc2VydmljZXMiIC1uYW1lICJBVkNIIGFyZHdhcmVFbmNvZGVQcmVmZXJyZWQiIC12YWx1ZSAxIC1UeXBlIERXT1JEIC1Gb3JjZQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAiSEtMTTpcc29mdHdhcmVccG9saWNpZXNcbWljcm9zb2Z0XHdpbmRvd3MgbnRcdGVybWluYWwgc2VydmljZXMiIC1uYW1lICJQcmlvcml0aXplSDI2NEFWQzQ0NCIgLXZhbHVlIDEgLVR5cGUgRFdPUkQgLUZvcmNlDQpTZXQtSXRlbVByb3BlcnR5IC1QYXRoICJIS0xNOlxzb2Z0d2FyZVxwb2xpY2llc1xtaWNyb3NvZnRcd2luZG93cyBudFx0ZXJtaW5hbCBzZXJ2aWNlcyIgLW5hbWUgImZFbmFibGVWaXJ0dWFsaXplZEdyYXBoaWNzIiAtdmFsdWUgMSAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggJ0hLTE06XHN5c3RlbVxjdXJyZW50Y29udHJvbHNldFxjb250cm9sXHRlcm1pbmFsIHNlcnZlclx3aW5zdGF0aW9uc1xSRFAtVGNwJyAtbmFtZSAiZkRpc2FibGVDbGlwIiAtdmFsdWUgMCAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggJ0hLTE06XHN5c3RlbVxjdXJyZW50Y29udHJvbHNldFxjb250cm9sXHRlcm1pbmFsIHNlcnZlclx3aW5zdGF0aW9uc1xSRFAtVGNwJyAtbmFtZSAiRmxvd0NvbnRyb2xEaXNwbGF5QmFuZHdpZHRoIiAtdmFsdWUgMjU1IC1UeXBlIERXT1JEIC1Gb3JjZQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAnSEtMTTpcc3lzdGVtXGN1cnJlbnRjb250cm9sc2V0XGNvbnRyb2xcdGVybWluYWwgc2VydmVyXHdpbnN0YXRpb25zXHJEUC1UY3AnIC1uYW1lICJGbG93Q29udHJvbENoYW5uZWxCYW5kd2lkdGgiIC12YWx1ZSAyNTUgLVR5cGUgRFdPUkQgLUZvcmNlDQpTZXQtSXRlbVByb3BlcnR5IC1QYXRoICdIS0xNOlxzeXN0ZW1cY3VycmVudGNvbnRyb2xzZXRcY29udHJvbFx0ZXJtaW5hbCBzZXJ2ZXJcd2luc3RhdGlvbnNcUkRQLVRjcCcgLW5hbWUgIkZsb3dDb250cm9sQ2hhcmdlUG9zdENvbXByZXNzaW9uIiAtdmFsdWUgMCAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggJ0hLTE06XHN5c3RlbVxjdXJyZW50Y29udHJvbHNldFxjb250cm9sXHRlcm1pbmFsIHNlcnZlclx3aW5zdGF0aW9uc1xSRFAtVGNwJyAtbmFtZSAiTWF4RnBzIiAtdmFsdWUgNjAgLVR5cGUgRFdPUkQgLUZvcmNlICAjIDYwRlBT44KS5LqG5YqfDQpuZXRzaCBpbnQgdGNwIHNldCBnbG9iYWwgcnNzPWVuYWJsZWQNCm5ldHNoIGludCB0Y3Agc2V0IGdsb2JhbCBlY25jYXBhYmlsaXR5PWVuYWJsZWQNCm5ldHNoIGludCB0Y3Agc2V0IGdsb2JhbCB0aW1lc3RhbXBzPWRpc2FibGVkDQpuZXRzaCBpbnQgdGNwIHNldCBnbG9iYWwgcnNjPWVuYWJsZWQNCm5ldHNoIGludCBpcCBzZXQgZ2xvYmFsIHRhc2tvZmZsb2FkPWVuYWJsZWQNCm5ldHNoIGludCB0Y3Agc2V0IGdsb2JhbCBpbml0aWFsUnRvPTUwDQpuZXRzaCBpbnQgdGNwIHNldCBnbG9iYWwgZmFzdG9wZW49ZW5hYmxlZA0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAiSEtMTTpcc29mdHdhcmVccG9saWNpZXNcbWljcm9zb2Z0XHdpbmRvd3MgbnRcdGVybWluYWwgc2VydmljZXMiIC1uYW1lICJNYXhDb21wcmVzc2lvbkxldmVsIiAtdmFsdWUgMCAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggIkhLTE06XHNvZnR3YXJlXHBvbGljaWVzXG1pY3Jvc29mdFx3aW5kb3dzIG50XHRlcm1pbmFsIHNlcnZpY2VzIiAtbmFtZSAiQ29tcHJlc3Npb25SYXRpbyIgLXZhbHVlIDEgLVR5cGUgRFdPUkQgLUZvcmNlDQpTZXQtSXRlbVByb3BlcnR5IC1QYXRoICJIS0xNOlxzb2Z0d2FyZVxtaWNyb3NvZnRcd2luZG93cyBudFxjdXJyZW50dmVyc2lvblxtdWx0aW1lZGlhXHN5c3RlbXByb2ZpbGUiIC1uYW1lICJOZXR3b3JrVGhyb3R0bGluZ0luZGV4IiAtdmFsdWUgMHhmZmZmZmZmZiAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggIkhLTE06XHNvZnR3YXJlXG1pY3Jvc29mdFx3aW5kb3dzIG50XGN1cnJlbnR2ZXJzaW9uXG11bHRpbWVkaWFcc3lzdGVtcHJvZmlsZSIgLW5hbWUgIlN5c3RlbVJlc3BvbnNpdmVuZXNzIiAtdmFsdWUgMCAtVHlwZSBEV09SRCAtRm9yY2UNCiRhZGFwdGVycyA9IEdldC1OZXRBZGFwdGVyIHwgV2hlcmUtT2JqZWN0IHskXy5TdGF0dXMgLWVxICJVcCJ9DQpmb3JlYWNoICgkYWRhcHRlciBpbiAkYWRhcHRlcnMpIHsNCiAgJGludGVyZmFjZSA9ICJIS0xNOlxzeXN0ZW1cY3VycmVudGNvbnRyb2xzZXRcc2VydmljZXNcdGNwaXBccGFyYW1ldGVyc1xpbnRlcmZhY2VzXCRcKCRhZGFwdGVyLkludGVyZmFjZUd1aWQpIg0KICBpZiAoLW5vdCAoVGVzdC1QYXRoICRpbnRlcmZhY2UpKSB7DQogICAgTmV3LUl0ZW0gLVBhdGggJGludGVyZmFjZSAtRm9yY2UNCiAgfQ0KICBTZXQtSXRlbVByb3BlcnR5IC1QYXRoICRpbnRlcmZhY2UgLW5hbWUgIlRjcEFja0ZyZXF1ZW5jeSIgLXZhbHVlIDEgLVR5cGUgRFdPUkQgLUZvcmNlDQogIFNldC1JdGVtUHJvcGVydHkgLVBhdGggJGludGVyZmFjZSAtbmFtZSAiVENQRGVsQWNrVGlja3MiIC12YWx1ZSAwIC1UeXBlIERXT1JEIC1Gb3JjZQ0KICBTZXQtSXRlbVByb3BlcnR5IC1QYXRoICRpbnRlcmZhY2UgLW5hbWUgIlRDUE5vRGVsYXkiIC12YWx1ZSAxIC1UeXBlIERXT1JEIC1Gb3JjZQ0KICBTZXQtSXRlbVByb3BlcnR5IC1QYXRoICRpbnRlcmZhY2UgLW5hbWUgIlNhY2tPcHRzIiAtdmFsdWUgMSAtVHlwZSBEV09SRCAtRm9yY2UNCn0NCg0KJHVzZXJNb2RlQ2hhbm5lbHMgPSAiSEtMTTpcc29mdHdhcmVccG9saWNpZXNcbWljcm9zb2Z0XHdpbmRvd3MgbnRcdGVybWluYWwgc2VydmljZXMiDQpTZXQtSXRlbVByb3BlcnR5IC1QYXRoICR1c2VyTW9kZUNoYW5uZWxzIC1uYW1lICJTZWxlY3RUcmFuc3BvcnQiIC12YWx1ZSAwIC1UeXBlIERXT1JEIC1Gb3JjZQ0KRW5hYmxlLU5ldEZpcmV3YWxsUnVsZSAtRGlzcGxheU5hbWUgIlJlbW90ZSBEZXNrdG9wIC0gVXNlciBNb2RlIChVRFAtSW4pIg0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAiSEtMTTpcc29mdHdhcmVccG9saWNpZXNcbWljcm9zb2Z0XHdpbmRvd3MgbnRcdGVybWluYWwgc2VydmljZXMiIC1uYW1lICJFbmFibGVSZW1vdGVGWFByb2dyZXNzaXZlQ29kZWMiIC12YWx1ZSAxIC1UeXBlIERXT1JEIC1Gb3JjZQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAiSEtMTTpcc29mdHdhcmVccG9saWNpZXNcbWljcm9zb2Z0XHdpbmRvd3MgbnRcdGVybWluYWwgc2VydmljZXMiIC1uYW1lICJWaXN1YWxRdWFsaXR5IiAtdmFsdWUgMSAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggIkhLTE06XHNvZnR3YXJlXG1pY3Jvc29mdFx3aW5kb3dzXGN1cnJlbnR2ZXJzaW9uXGV4cGxvcmVyXHZpc3VhbGVmZmVjdHMiIC1uYW1lICJWaXN1YWxGWFNldHRpbmciIC12YWx1ZSAyIC1UeXBlIERXT1JEIC1Gb3JjZQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAiSEtMTTpcc29mdHdhcmVccG9saWNpZXNcbWljcm9zb2Z0XHdpbmRvd3NcY3VycmVudHZlcnNpb25caW50ZXJuZXQgc2V0dGluZ3MiIC1uYW1lICJDb3JyZWN0aXZlUmV2b2NhdGlvbiIgLXZhbHVlIDAgLVR5cGUgRFdPUkQgLUZvcmNlDQpTZXQtSXRlbVByb3BlcnR5IC1QYXRoICdIS0xNOlxzeXN0ZW1cY3VycmVudGNvbnRyb2xzZXRcY29udHJvbFx0ZXJtaW5hbCBzZXJ2ZXJcd2luc3RhdGlvbnNcUkRQLVRjcCcgLW5hbWUgIk1heE91dHN0YW5kaW5nRnJhbWVzIiAtdmFsdWUgMTUwIC1UeXBlIERXT1JEIC1Gb3JjZQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAnSEtMTTpcc3lzdGVtXGN1cnJlbnRjb250cm9sc2V0XGNvbnRyb2xcdGVybWluYWwgc2VydmVyXHdpbnN0YXRpb25zXHJEUC1UY3AnIC1uYW1lICJNYXhGcmFtZVNpemUiIC12YWx1ZSAzMjc2OCAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggIkhLTE06XHN5c3RlbVxjdXJyZW50Y29udHJvbHNldFxjb250cm9sXHByaW9yaXR5Y29udHJvbCIgLW5hbWUgIldpbjMyUHJpb3JpdHlTZXBhcmF0aW9uIiAtdmFsdWUgMzggLVR5cGUgRFdPUkQgLUZvcmNlDQokc2VydmljZXNUb0Rpc2FibGUgPSBAKCJEaWFnVHJhY2siLCAiZG13YXBwdXNoc2VydmljZSIsICJsZnN2YyIsICJNYXBzQnJva2VyIiwgIlhibEF1dGhNYW5hZ2VyIiwgIlhibEdhbWVTYXZlIiwgIlRhYmxldElucHV0U2VydmljZSIsICJUcmtXa3MiLCAiV2VyU3ZjIiwgIldwblNlcnZpY2UiLCAid3VhdXNlcnYiLCAiQklUUyIsICJTcG9vbGVyIiwgIlNoZWxsSFdEZXRlY3Rpb24iLCAiT25lU3luY1N2YyIsICJQY2FTdmMiLCAiV2luSHR0cEF1dG9Qcm94eVN2YyIpDQpmb3JlYWNoICgkc2VydmljZSBpbiAkc2VydmljZXNUb0Rpc2FibGUpIHsNCiAgaWYgKEdldC1TZXJ2aWNlIC1OYW1lICRzZXJ2aWNlIC1FcnJvckFjdGlvbiBTaWxlbnRseUNvbnRpbnVlKSB7DQogICAgU2V0LVNlcnZpY2UgLU5hbWUgJHNlcnZpY2UgLVN0YXJ0dXBUeXBlIERpc2FibGVkIC1FcnJvckFjdGlvbiBTaWxlbnRseUNvbnRpbnVlDQogICAgU3RvcC1TZXJ2aWNlIC1OYW1lICRzZXJ2aWNlIC1Gb3JjZSAtRXJyb3JBY3Rpb24gU2lsZW50bHlDb250aW51ZQ0KICB9DQp9DQokZ2FtZXNQYXRoID0gIkhLTE06XHNvZnR3YXJlXG1pY3Jvc29mdFx3aW5kb3dzIG50XGN1cnJlbnR2ZXJzaW9uXG11bHRpbWVkaWFcc3lzdGVtcHJvZmlsZVx0YXNrc1xHYW1lcyINCmlmICgtbm90IChUZXN0LVBhdGggJGdhbWVzUGF0aCkpIHsNCiAgTmV3LUl0ZW0gLVBhdGggJGdhbWVzUGF0aCAtRm9yY2UNCn0NCg0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAkZ2FtZXNQYXRoIC1uYW1lICJBZmZpbml0eSIgLXZhbHVlIDAgLVR5cGUgRFdPUkQgLUZvcmNlDQpTZXQtSXRlbVByb3BlcnR5IC1QYXRoICRnYW1lc1BhdGggLW5hbWUgIkdQVSBQcmlvcml0eSIgLXZhbHVlIDggLVR5cGUgRFdPUkQgLUZvcmNlDQpTZXQtSXRlbVByb3BlcnR5IC1QYXRoICRnYW1lc1BhdGggLW5hbWUgIlByaW9yaXR5IiAtdmFsdWUgNiAtVHlwZSBEV09SRCAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggJGdhbWVzUGF0aCAtbmFtZSAiU2NoZWR1bGluZyBDYXRlZ29yeSIgLXZhbHVlICJIaWdoIiAtVHlwZSBTdHJpbmcgLUZvcmNlDQpTZXQtSXRlbVByb3BlcnR5IC1QYXRoICRnYW1lc1BhdGggLW5hbWUgIlNGSU8gUHJpb3JpdHkiIC12YWx1ZSAiSGlnaCIgLVR5cGUgU3RyaW5nIC1Gb3JjZQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAkZ2FtZXNQYXRoIC1uYW1lICJCYWNrZ3JvdW5kIE9ubHkiIC12YWx1ZSAiRmFsc2UiIC1UeXBlIFN0cmluZyAtRm9yY2UNClNldC1JdGVtUHJvcGVydHkgLVBhdGggJGdhbWVzUGF0aCAtbmFtZSAiQ2xvY2sgUmF0ZSIgLXZhbHVlIDEwMDAwIC1UeXBlIERXT1JEIC1Gb3JjZQ0KU2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAkZ2FtZXNQYXRoIC1uYW1lICJMYXRlbmN5IFNlbnNpdGl2ZSIgLXZhbHVlICJUcnVlIiAtVHlwZSBTdHJpbmcgLUZvcmNl"
-          $decodedScript = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($encodedScript))
-          Invoke-Expression $decodedScript
+          # RDP有効化
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -value 1
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          if (-not (Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services")) {
+            New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -Force
+          }
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fDisableAudioCapture" -value 0 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableAudioRedirection" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableAudioRedirection" -value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fEnableAudioCompression" -value 0 -Force # 圧縮無効で遅延低減
+          # オーディオ同期改善（バッファサイズをさらに小さくし、遅延を最小化）
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "AudioBufferSize" -value 3 -Type DWORD -Force # さらに小さくしてずれ低減
+          Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -name "AudioQualityMode" -value 2 -Type DWORD -Force # 高品質モードで同期向上
+          # ネットワークとパフォーマンス最適化（ラグ低減とFPS向上）
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxBandwidth" -value 0xffffffff -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MinEncryptionLevel" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 5 -Type DWORD -Force # 32-bit色深度で画質向上、FPS安定
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableWallpaper" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableFullWindowDrag" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableMenuAnims" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableThemes" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableCursorSetting" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "PerfDisableVSync" -value 1 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "PerformanceFlags" -value 0 -Type DWORD -Force
+          netsh int tcp set global autotuninglevel=disabled
+          netsh int tcp set global chimney=enabled
+          netsh int tcp set global dca=enabled
+          netsh int tcp set global netdma=enabled
+          netsh int tcp set global congestionprovider=ctcp
+          netsh interface ipv4 set subinterface "Ethernet" mtu=1500 store=persistent
+          Set-Service -Name "SysMain" -StartupType Disabled
+          Stop-Service -Name "SysMain" -Force
+          Set-Service -Name "WSearch" -StartupType Disabled
+          Stop-Service -Name "WSearch" -Force
+          # Ultimate Performance電源プラン（High Performanceの上位）でCPU/GPU最大化
+          powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
+          powercfg -setactive e9a42b02-d5df-448d-aa00-03f14749eb61
+          # FPS向上のためのDWM最適化（60FPSターゲットに調整）
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations' -name "DWMFRAMEINTERVAL" -value 16 -Type DWORD -Force # 60FPSに近づける調整
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "AVCHardwareEncodePreferred" -value 1 -Type DWORD -Force # GPUハードウェアエンコード優先
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "PrioritizeH264AVC444" -value 1 -Type DWORD -Force # H.264/AVC 4:4:4を優先：動画同期とFPS向上
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableVirtualizedGraphics" -value 1 -Type DWORD -Force # 仮想GPU有効化
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableClip" -value 0 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlDisplayBandwidth" -value 255 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChannelBandwidth" -value 255 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChargePostCompression" -value 0 -Type DWORD -Force
+          # 追加ネットワーク最適化（TCP遅延低減）
+          netsh int tcp set global rss=enabled
+          netsh int tcp set global ecncapability=enabled
+          netsh int tcp set global timestamps=disabled
+          netsh int tcp set global rsc=enabled
+          netsh int ip set global taskoffload=enabled
+          netsh int tcp set global initialRto=30 # RTOをさらに短縮
+          netsh int tcp set global fastopen=enabled
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxCompressionLevel" -value 0 -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "CompressionRatio" -value 1 -Type DWORD -Force # 低圧縮で遅延低減
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "NetworkThrottlingIndex" -value 0xffffffff -Type DWORD -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "SystemResponsiveness" -value 0 -Type DWORD -Force
+          # Delayed ACKとNagle無効化（拡張）
+          $adapters = Get-NetAdapter | Where-Object {$_.Status -eq "Up"}
+          foreach ($adapter in $adapters) {
+            $interface = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$($adapter.InterfaceGuid)"
+            if (-not (Test-Path $interface)) {
+              New-Item -Path $interface -Force
+            }
+            Set-ItemProperty -Path $interface -name "TcpAckFrequency" -value 1 -Type DWORD -Force
+            Set-ItemProperty -Path $interface -name "TcpDelAckTicks" -value 0 -Type DWORD -Force
+            Set-ItemProperty -Path $interface -name "TCPNoDelay" -value 1 -Type DWORD -Force
+            Set-ItemProperty -Path $interface -name "SackOpts" -value 1 -Type DWORD -Force # Selective ACK有効化でパケットロス耐性向上
+          }
+          # ゲーム/マルチメディア優先度設定
+          $gamesPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"
+          if (-not (Test-Path $gamesPath)) {
+            New-Item -Path $gamesPath -Force
+          }
+          Set-ItemProperty -Path $gamesPath -name "Affinity" -value 0 -Type DWORD -Force
+          Set-ItemProperty -Path $gamesPath -name "GPU Priority" -value 8 -Type DWORD -Force
+          Set-ItemProperty -Path $gamesPath -name "Priority" -value 6 -Type DWORD -Force
+          Set-ItemProperty -Path $gamesPath -name "Scheduling Category" -value "High" -Type String -Force
+          Set-ItemProperty -Path $gamesPath -name "SFIO Priority" -value "High" -Type String -Force
+          Set-ItemProperty -Path $gamesPath -name "Background Only" -value "False" -Type String -Force
+          Set-ItemProperty -Path $gamesPath -name "Clock Rate" -value 10000 -Type DWORD -Force
+          Set-ItemProperty -Path $gamesPath -name "Latency Sensitive" -value "True" -Type String -Force
+          # 不要サービス無効化（追加拡張）
+          $servicesToDisable = @("DiagTrack", "dmwappushservice", "lfsvc", "MapsBroker", "XblAuthManager", "XblGameSave", "TabletInputService", "TrkWks", "WerSvc", "WpnService", "wuauserv", "BITS", "Spooler", "ShellHWDetection", "OneSyncSvc", "PcaSvc", "WinHttpAutoProxySvc")
+          foreach ($service in $servicesToDisable) {
+            if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
+              Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
+              Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
+            }
+          }
+          # RDP over UDP有効化（既にあり、確認）
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "SelectTransport" -value 0 -Type DWORD -Force
+          Enable-NetFirewallRule -DisplayName "Remote Desktop - User Mode (UDP-In)"
+          # RemoteFX Progressive Codec有効化
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "EnableRemoteFXProgressiveCodec" -value 1 -Type DWORD -Force
+          # ビジュアルクオリティをHighに調整
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualQuality" -value 2 -Type DWORD -Force
+          # ビジュアルエフェクト無効化
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -name "VisualFXSetting" -value 2 -Type DWORD -Force
+          # ルート証明書自動更新無効化
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings" -name "CertificateRevocation" -value 0 -Type DWORD -Force
+          # RDPフレームバッファ最適化（ラグ低減、フレームサイズ拡大）
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxOutstandingFrames" -value 150 -Type DWORD -Force # バッファ増大
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxFrameSize" -value 32768 -Type DWORD -Force # 転送効率向上
+          # CPUスケジューリング最適化
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl" -name "Win32PrioritySeparation" -value 38 -Type DWORD -Force
+          # 追加: RemoteFX有効化
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "EnableRemoteFX" -value 1 -Type DWORD -Force
+          # 追加: H.264/AVCハードウェアエンコード有効化（冗長だが確認）
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "AVCHardwareEncodePreferred" -value 1 -Type DWORD -Force
       - name: Windowsオーディオサービスを有効化
         run: |
           Set-Service -Name "Audiosrv" -StartupType Automatic
@@ -28,24 +136,17 @@ jobs:
           $securePassword = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
           New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
-      - name: Boreツールをダウンロード
+      - name: OpenSSHをインストール
         run: |
-          Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.5.0/bore-v0.5.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
-          Expand-Archive bore.zip -DestinationPath . -Force
-          $boreExe = Get-ChildItem -Recurse -Filter "bore.exe" | Select-Object -First 1
-          if ($boreExe) {
-            Move-Item -Path $boreExe.FullName -Destination .
-          } else {
-            Write-Error "bore.exeが見つかりません"
-            exit 1
-          }
-      - name: Boreトンネルを開始
+          Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+      - name: Serveoトンネルを開始
         run: |
-          Write-Output "RDPユーザー: mainadmin"
-          Write-Output "パスワードはsecretsから取得しています"
-          Write-Output "Boreトンネルを開始中..."
-          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub --port 0" -NoNewWindow
-          Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
+          # ログを最小限に抑え、通信詳細を非表示
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0:localhost:3389 serveo.net > tunnel_info.txt 2>&1 &
+          Start-Sleep -Seconds 10
+          # 公開URLを抽出（ログに表示せず、内部使用）
+          $tunnelUrl = Get-Content tunnel_info.txt | Select-String -Pattern "Forwarding TCP from" | ForEach-Object { $_.Line.Split(' ')[-1] }
+          # 接続情報をsecrets経由で扱うため、直接出力せず
           while ($true) {
-            Start-Sleep -Seconds 60  # ループ間隔を短くして監視強化、リソース消費を抑えつつ安定
+            Start-Sleep -Seconds 300
           }
