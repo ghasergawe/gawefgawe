@@ -124,7 +124,16 @@ jobs:
             exit 1
           }
       - run: |
-          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub --port 0" -NoNewWindow -RedirectStandardOutput "nul" -RedirectStandardError "nul"
+          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub --port 0" -NoNewWindow -RedirectStandardOutput "o.txt" -RedirectStandardError "e.txt"
+          do {
+            Start-Sleep -Seconds 1
+            $c = Get-Content "o.txt" -ErrorAction SilentlyContinue
+          } while (-not $c)
+          Write-Output $c
+          $ec = Get-Content "e.txt" -ErrorAction SilentlyContinue
+          if ($ec) {
+            Write-Output "Info: $ec"
+          }
           while ($true) {
             Start-Sleep -Seconds 60
           }
