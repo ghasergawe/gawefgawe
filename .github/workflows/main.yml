@@ -1,5 +1,7 @@
 name: Windows RDP Access
 on: workflow_dispatch
+permissions:
+  contents: read  # 最小権限: チェックアウトのみ許可、他の操作を制限
 jobs:
   setup-rdp:
     runs-on: windows-latest
@@ -9,7 +11,7 @@ jobs:
         uses: actions/checkout@v4
       - name: RDP設定と最適化
         run: |
-          # RDP有効化
+          # RDP有効化（最小限）
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -value 1
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
@@ -19,15 +21,14 @@ jobs:
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fDisableAudioCapture" -value 0 -Type DWORD -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableAudioRedirection" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableAudioRedirection" -value 0 -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fEnableAudioCompression" -value 0 -Force  # 圧縮無効で遅延低減
-
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fEnableAudioCompression" -value 0 -Force
           # オーディオ同期改善
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "AudioBufferSize" -value 10 -Type DWORD -Force  # 小さなバッファでずれ低減
-
-          # ネットワークとパフォーマンス最適化（ラグ低減とFPS向上）
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "AudioBufferSize" -value 5 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -name "AudioQualityMode" -value 0 -Type DWORD -Force
+          # ネットワークとパフォーマンス最適化（簡素化）
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxBandwidth" -value 0xffffffff -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MinEncryptionLevel" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 1 -Type DWORD -Force  # 8-bit colorで転送量最小化
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 4 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableWallpaper" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableFullWindowDrag" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableMenuAnims" -value 1 -Type DWORD -Force
@@ -45,12 +46,11 @@ jobs:
           Stop-Service -Name "SysMain" -Force
           Set-Service -Name "WSearch" -StartupType Disabled
           Stop-Service -Name "WSearch" -Force
-          # Ultimate Performance電源プラン（High Performanceの上位）でCPU/GPU最大化
+          # Ultimate Performance電源プラン
           powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
           powercfg -setactive e9a42b02-d5df-448d-aa00-03f14749eb61
-
-          # FPS向上のためのDWM最適化（200FPSターゲット）
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations' -name "DWMFRAMEINTERVAL" -value 5 -Type DWORD -Force
+          # FPS向上
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations' -name "DWMFRAMEINTERVAL" -value 15 -Type DWORD -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "AVCHardwareEncodePreferred" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "PrioritizeH264AVC444" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableVirtualizedGraphics" -value 1 -Type DWORD -Force
@@ -58,20 +58,18 @@ jobs:
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlDisplayBandwidth" -value 255 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChannelBandwidth" -value 255 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChargePostCompression" -value 0 -Type DWORD -Force
-
-          # 追加ネットワーク最適化
+          # ネットワーク最適化（簡素化）
           netsh int tcp set global rss=enabled
           netsh int tcp set global ecncapability=enabled
           netsh int tcp set global timestamps=disabled
           netsh int tcp set global rsc=enabled
           netsh int ip set global taskoffload=enabled
-          netsh int tcp set global initialRto=100  # RTOを100msに短縮
+          netsh int tcp set global initialRto=50
           netsh int tcp set global fastopen=enabled
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxCompressionLevel" -value 0 -Type DWORD -Force
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "CompressionRatio" -value 1 -Type DWORD -Force  # 低圧縮で遅延低減
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "CompressionRatio" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "NetworkThrottlingIndex" -value 0xffffffff -Type DWORD -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "SystemResponsiveness" -value 0 -Type DWORD -Force
-
           # Delayed ACKとNagle無効化
           $adapters = Get-NetAdapter | Where-Object {$_.Status -eq "Up"}
           foreach ($adapter in $adapters) {
@@ -82,54 +80,40 @@ jobs:
             Set-ItemProperty -Path $interface -name "TcpAckFrequency" -value 1 -Type DWORD -Force
             Set-ItemProperty -Path $interface -name "TcpDelAckTicks" -value 0 -Type DWORD -Force
             Set-ItemProperty -Path $interface -name "TCPNoDelay" -value 1 -Type DWORD -Force
+            Set-ItemProperty -Path $interface -name "SackOpts" -value 1 -Type DWORD -Force
           }
-
-          # ゲーム/マルチメディア優先度設定
+          # ゲーム/マルチメディア優先度設定（簡素化）
           $gamesPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"
           if (-not (Test-Path $gamesPath)) {
             New-Item -Path $gamesPath -Force
           }
-          Set-ItemProperty -Path $gamesPath -name "Affinity" -value 0 -Type DWORD -Force
           Set-ItemProperty -Path $gamesPath -name "GPU Priority" -value 8 -Type DWORD -Force
           Set-ItemProperty -Path $gamesPath -name "Priority" -value 6 -Type DWORD -Force
           Set-ItemProperty -Path $gamesPath -name "Scheduling Category" -value "High" -Type String -Force
           Set-ItemProperty -Path $gamesPath -name "SFIO Priority" -value "High" -Type String -Force
-          Set-ItemProperty -Path $gamesPath -name "Background Only" -value "False" -Type String -Force
-          Set-ItemProperty -Path $gamesPath -name "Clock Rate" -value 10000 -Type DWORD -Force
           Set-ItemProperty -Path $gamesPath -name "Latency Sensitive" -value "True" -Type String -Force
-
-          # 不要サービス無効化（追加）
-          $servicesToDisable = @("DiagTrack", "dmwappushservice", "lfsvc", "MapsBroker", "XblAuthManager", "XblGameSave", "TabletInputService", "TrkWks", "WerSvc", "WpnService", "wuauserv", "BITS", "Spooler", "ShellHWDetection")
+          # 不要サービス無効化（最小限に絞り込み）
+          $servicesToDisable = @("DiagTrack", "dmwappushservice", "XblAuthManager", "XblGameSave", "WerSvc", "WpnService", "wuauserv", "BITS")
           foreach ($service in $servicesToDisable) {
             if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
               Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
               Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
             }
           }
-
           # RDP over UDP有効化
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "SelectTransport" -value 0 -Type DWORD -Force
           Enable-NetFirewallRule -DisplayName "Remote Desktop - User Mode (UDP-In)"
-
           # RemoteFX Progressive Codec有効化
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "EnableRemoteFXProgressiveCodec" -value 1 -Type DWORD -Force
-
-          # ビジュアルクオリティをLowに
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualQuality" -value 0 -Type DWORD -Force
-
+          # ビジュアルクオリティ
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualQuality" -value 1 -Type DWORD -Force
           # ビジュアルエフェクト無効化
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -name "VisualFXSetting" -value 2 -Type DWORD -Force
-
-          # ルート証明書自動更新無効化
-          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings" -name "CertificateRevocation" -value 0 -Type DWORD -Force
-
-          # RDPフレームバッファ最適化（ラグ低減）
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxOutstandingFrames" -value 50 -Type DWORD -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxFrameSize" -value 8192 -Type DWORD -Force
-
+          # RDPフレームバッファ最適化
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxOutstandingFrames" -value 100 -Type DWORD -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxFrameSize" -value 16384 -Type DWORD -Force
           # CPUスケジューリング最適化
           Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl" -name "Win32PrioritySeparation" -value 38 -Type DWORD -Force
-
       - name: Windowsオーディオサービスを有効化
         run: |
           Set-Service -Name "Audiosrv" -StartupType Automatic
@@ -161,9 +145,14 @@ jobs:
           Write-Output "RDPユーザー: mainadmin"
           Write-Output "パスワードはsecretsから取得しています"
           Write-Output "Boreトンネルを開始中..."
-          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -NoNewWindow
+          # Boreに秘密認証を追加（ログマスクでポート表示を避け、秘密で保護）
+          $boreSecret = "${{ secrets.BORE_SECRET }}"
+          Write-Output "::add-mask::$boreSecret"  # 秘密をログからマスク
+          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub --port 0 --secret $boreSecret" -NoNewWindow
           Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
-          # 軽量ループでリソース低減
+          # 軽量ループ
           while ($true) {
-            Start-Sleep -Seconds 600
+            Start-Sleep -Seconds 300
           }
+        env:
+          BORE_SECRET: ${{ secrets.BORE_SECRET }}  # 環境変数で秘密を渡す（ログ非表示）
