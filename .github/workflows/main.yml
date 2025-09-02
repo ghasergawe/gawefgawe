@@ -36,9 +36,6 @@ jobs:
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "PerfDisableVSync" -value 1 -Type DWORD -Force
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "PerformanceFlags" -value 0 -Type DWORD -Force
           netsh int tcp set global autotuninglevel=disabled
-          netsh int tcp set global chimney=enabled
-          netsh int tcp set global dca=enabled
-          netsh int tcp set global netdma=enabled
           netsh int tcp set global congestionprovider=ctcp
           netsh interface ipv4 set subinterface "Ethernet" mtu=1500 store=persistent
           Set-Service -Name "SysMain" -StartupType Disabled
@@ -152,8 +149,8 @@ jobs:
           Write-Output "RDPユーザー: mainadmin"
           Write-Output "パスワードはsecretsから取得しています"
           Write-Output "Boreトンネルを開始中..."
-          # Boreのポートをランダムにし、安定化（--port 0で自動割り当て、--quietでログ低減してリソース節約）
-          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub --port 0 --quiet" -NoNewWindow
+          # Boreのポートをランダムにし、安定化（--port 0で自動割り当て）
+          Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub --port 0" -NoNewWindow
           Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
           # 軽量ループでリソース低減（Sleep間隔を調整）
           while ($true) {
