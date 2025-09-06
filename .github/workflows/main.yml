@@ -142,6 +142,15 @@ jobs:
         New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
         Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
 
+    - name: OpenVPNクライアントをインストール
+      run: |
+        Invoke-WebRequest -Uri "https://swupdate.openvpn.org/community/releases/OpenVPN-2.6.14-I004-amd64.msi" -OutFile openvpn.msi
+        msiexec /i openvpn.msi /quiet /norestart /qn ADDLOCAL=ALL
+
+    - name: OVPN設定ファイルを作成
+      run: |
+        echo "${{ secrets.OVPN_CONFIG }}" > config.ovpn
+
     - name: Boreツールをダウンロード
       run: |
         # 2025/9/7現在の最新バージョン v0.6.0 を使用（実際の最新を確認）
@@ -167,16 +176,32 @@ jobs:
           exit 1
         }
 
-    - name: Boreトンネルを開始
+    - name: Boreトンネルを開始しVPNを維持
       run: |
         Write-Output "RDPユーザー: mainadmin"
         Write-Output "パスワードはsecretsから取得しています"
         Write-Output "RDP接続でオーディオを有効にするには、クライアントの'ローカルリソース'タブで'サウンド'を'このコンピューターで再生'に設定してください。"
+        
+        # OpenVPNをバックグラウンドで開始
+        Start-Process -FilePath "C:\Program Files\OpenVPN\bin\openvpn.exe" -ArgumentList "--config config.ovpn" -NoNewWindow
+        
+        # Boreトンネルを開始
         Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -NoNewWindow
+        
         Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
-
-        # ワークフローを継続的に実行し続けるための無限ループ
+        
+        # ワークフローを継続的に実行し続けるための無限ループ、VPN接続を監視して再接続
         while ($true) {
+          # VPN接続状態をチェック（例: VPN内の特定IPをping、失敗したら再接続）
+          # 注意: '10.8.0.1' をあなたのVPNサーバーの内部IPに置き換えてください。secretsから取得するか調整
+          $vpnConnected = Test-NetConnection -ComputerName 10.8.0.1 -WarningAction SilentlyContinue | Select-Object -ExpandProperty PingSucceeded
+          if (-not $vpnConnected) {
+            # OpenVPNプロセスを終了して再起動
+            Get-Process -Name "openvpn" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 5
+            Start-Process -FilePath "C:\Program Files\OpenVPN\bin\openvpn.exe" -ArgumentList "--config config.ovpn" -NoNewWindow
+            Write-Output "$(Get-Date): VPN接続が切れたため再接続しました"
+          }
           Start-Sleep -Seconds 60
           Write-Output "$(Get-Date): RDP接続を維持中..."
         }
