@@ -120,14 +120,101 @@ jobs:
           Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "AudioLatencyPriority" -value 1 -Type DWORD -Force
       - name: Windowsオーディオサービスを有効化
         run: |
-          Set-Service -Name "Audiosrv" -StartupType Automatic
-          Start-Service -Name "Audiosrv"
-          Set-Service -Name "AudioEndpointBuilder" -StartupType Automatic
-          Start-Service -Name "AudioEndpointBuilder"
-      - name: Install Visual Studio Code
-        run: |
-          Invoke-WebRequest -Uri "https://update.code.visualstudio.com/latest/win32-x64/stable" -OutFile VSCodeSetup.exe
-          Start-Process -FilePath .\VSCodeSetup.exe -ArgumentList "/VERYSILENT /NORESTART /MERGETASKS=!runcode" -Wait
+          Write-Output "Windowsオーディオサービスを有効化します..."
+          
+          # オーディオ関連サービスのリスト
+          $audioServices = @(
+            @{Name = "Audiosrv"; DisplayName = "Windows Audio"},
+            @{Name = "AudioEndpointBuilder"; DisplayName = "Windows Audio Endpoint Builder"}
+          )
+          
+          # 各サービスを有効化して起動
+          foreach ($service in $audioServices) {
+            Write-Output "$($service.DisplayName) ($($service.Name)) を処理中..."
+            
+            # サービスが存在するか確認
+            if (Get-Service -Name $service.Name -ErrorAction SilentlyContinue) {
+              # サービスの現在の状態を取得
+              $svc = Get-Service -Name $service.Name
+              Write-Output "サービスの現在の状態: $($svc.Status), スタートアップタイプ: $($svc.StartType)"
+              
+              # サービスを自動起動に設定
+              try {
+                Set-Service -Name $service.Name -StartupType Automatic -ErrorAction Stop
+                Write-Output "$($service.DisplayName) のスタートアップタイプを 'Automatic' に設定しました"
+              } catch {
+                Write-Warning "$($service.DisplayName) のスタートアップタイプ設定に失敗しました: $($_.Exception.Message)"
+              }
+              
+              # サービスが停止している場合は起動
+              if ($svc.Status -ne "Running") {
+                try {
+                  Start-Service -Name $service.Name -ErrorAction Stop
+                  Write-Output "$($service.DisplayName) を起動しました"
+                  
+                  # サービスが起動するのを待機
+                  $timeout = 10
+                  $startTime = Get-Date
+                  while ((Get-Service -Name $service.Name).Status -ne "Running" -and ((Get-Date) - $startTime).TotalSeconds -lt $timeout) {
+                    Start-Sleep -Seconds 1
+                  }
+                  
+                  if ((Get-Service -Name $service.Name).Status -eq "Running") {
+                    Write-Output "$($service.DisplayName) が正常に起動しました"
+                  } else {
+                    Write-Warning "$($service.DisplayName) の起動に時間がかかっています"
+                  }
+                } catch {
+                  Write-Warning "$($service.DisplayName) の起動に失敗しました: $($_.Exception.Message)"
+                }
+              } else {
+                Write-Output "$($service.DisplayName) は既に実行中です"
+              }
+            } else {
+              Write-Warning "$($service.DisplayName) ($($service.Name)) が見つかりません"
+            }
+          }
+          
+          # 追加: Windows Audio Serviceの依存関係を確認
+          Write-Output "Windows Audio Serviceの依存関係を確認します..."
+          try {
+            $dependencies = (Get-Service -Name "Audiosrv" -ErrorAction SilentlyContinue).DependentServices
+            if ($dependencies) {
+              Write-Output "依存サービス: $($dependencies.Name -join ', ')"
+              
+              # 依存サービスを起動
+              foreach ($depService in $dependencies) {
+                if ($depService.Status -ne "Running") {
+                  try {
+                    Start-Service -Name $depService.Name -ErrorAction Stop
+                    Write-Output "依存サービス $($depService.Name) を起動しました"
+                  } catch {
+                    Write-Warning "依存サービス $($depService.Name) の起動に失敗しました: $($_.Exception.Message)"
+                  }
+                }
+              }
+            }
+          } catch {
+            Write-Warning "依存関係の確認に失敗しました: $($_.Exception.Message)"
+          }
+          
+          # 追加: オーディオデバイスが有効か確認
+          Write-Output "オーディオデバイスの状態を確認します..."
+          try {
+            $audioDevices = Get-WmiObject -Class Win32_SoundDevice -ErrorAction Stop
+            if ($audioDevices) {
+              Write-Output "検出されたオーディオデバイス:"
+              foreach ($device in $audioDevices) {
+                Write-Output "- $($device.Name): $($device.Status)"
+              }
+            } else {
+              Write-Warning "オーディオデバイスが検出されませんでした"
+            }
+          } catch {
+            Write-Warning "オーディオデバイスの確認に失敗しました: $($_.Exception.Message)"
+          }
+          
+          Write-Output "オーディオサービスの有効化が完了しました"
       - name: RDPユーザーを作成
         run: |
           if ($PSVersionTable.PSVersion.Major -ge 7) {
@@ -137,9 +224,26 @@ jobs:
           $securePassword = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
           New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
+      - name: Visual Studio Codeをインストール
+        run: |
+          # wingetが利用可能か確認
+          if (Get-Command winget -ErrorAction SilentlyContinue) {
+            Write-Output "wingetを使用してVSCodeをインストールします"
+            winget install --id Microsoft.VisualStudioCode -e
+          } 
+          # Chocolateyが利用可能か確認
+          elseif (Get-Command choco -ErrorAction SilentlyContinue) {
+            Write-Output "Chocolateyを使用してVSCodeをインストールします"
+            choco install vscode -y
+          }
+          # どちらも利用できない場合はエラー
+          else {
+            Write-Error "wingetもChocolateyも利用できません。VSCodeをインストールできません。"
+            exit 1
+          }
       - name: Boreツールをダウンロード
         run: |
-          Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
+          Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.5.0/bore-v0.5.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
           Expand-Archive bore.zip -DestinationPath . -Force
           $boreExe = Get-ChildItem -Recurse -Filter "bore.exe" | Select-Object -First 1
           if ($boreExe) {
