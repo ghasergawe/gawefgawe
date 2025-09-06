@@ -142,14 +142,16 @@ jobs:
         New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
         Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
 
-    - name: OpenVPNクライアントをインストール
+    - name: Download OpenVPN Connect
       run: |
-        Invoke-WebRequest -Uri "https://swupdate.openvpn.org/community/releases/OpenVPN-2.6.14-I004-amd64.msi" -OutFile openvpn.msi
-        msiexec /i openvpn.msi /quiet /norestart /qn ADDLOCAL=ALL
+        Invoke-WebRequest -Uri "https://openvpn.net/downloads/openvpn-connect-v3-windows.msi" -OutFile "openvpn-connect.msi"
 
-    - name: OVPN設定ファイルを作成
+    - name: Install OpenVPN Connect
       run: |
-        echo "${{ secrets.OVPN_CONFIG }}" > config.ovpn
+        msiexec /i openvpn-connect.msi /qn /norestart
+        # To prevent RDP disconnection when connecting to VPN, ensure your OpenVPN profile uses split tunneling.
+        # This can be achieved by adding 'pull-filter ignore "redirect-gateway"' to your .ovpn file or configuring the VPN not to use the remote gateway as default.
+        # Note: This setting must be applied to your VPN profile manually via RDP after installation.
 
     - name: Boreツールをダウンロード
       run: |
@@ -176,32 +178,16 @@ jobs:
           exit 1
         }
 
-    - name: Boreトンネルを開始しVPNを維持
+    - name: Boreトンネルを開始
       run: |
         Write-Output "RDPユーザー: mainadmin"
         Write-Output "パスワードはsecretsから取得しています"
         Write-Output "RDP接続でオーディオを有効にするには、クライアントの'ローカルリソース'タブで'サウンド'を'このコンピューターで再生'に設定してください。"
-        
-        # OpenVPNをバックグラウンドで開始
-        Start-Process -FilePath "C:\Program Files\OpenVPN\bin\openvpn.exe" -ArgumentList "--config config.ovpn" -NoNewWindow
-        
-        # Boreトンネルを開始
         Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -NoNewWindow
-        
         Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
-        
-        # ワークフローを継続的に実行し続けるための無限ループ、VPN接続を監視して再接続
+
+        # ワークフローを継続的に実行し続けるための無限ループ
         while ($true) {
-          # VPN接続状態をチェック（例: VPN内の特定IPをping、失敗したら再接続）
-          # 注意: '10.8.0.1' をあなたのVPNサーバーの内部IPに置き換えてください。secretsから取得するか調整
-          $vpnConnected = Test-NetConnection -ComputerName 10.8.0.1 -WarningAction SilentlyContinue | Select-Object -ExpandProperty PingSucceeded
-          if (-not $vpnConnected) {
-            # OpenVPNプロセスを終了して再起動
-            Get-Process -Name "openvpn" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 5
-            Start-Process -FilePath "C:\Program Files\OpenVPN\bin\openvpn.exe" -ArgumentList "--config config.ovpn" -NoNewWindow
-            Write-Output "$(Get-Date): VPN接続が切れたため再接続しました"
-          }
           Start-Sleep -Seconds 60
           Write-Output "$(Get-Date): RDP接続を維持中..."
         }
