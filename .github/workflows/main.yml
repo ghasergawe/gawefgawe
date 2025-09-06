@@ -124,9 +124,6 @@ jobs:
           Start-Service -Name "Audiosrv"
           Set-Service -Name "AudioEndpointBuilder" -StartupType Automatic
           Start-Service -Name "AudioEndpointBuilder"
-      - name: Visual Studio Codeをインストール
-        run: |
-          winget install --id Microsoft.VisualStudioCode --exact --scope machine --accept-package-agreements --accept-source-agreements
       - name: RDPユーザーを作成
         run: |
           if ($PSVersionTable.PSVersion.Major -ge 7) {
@@ -136,6 +133,23 @@ jobs:
           $securePassword = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
           New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
+      - name: Visual Studio Codeをインストール
+        run: |
+          # wingetが利用可能か確認
+          if (Get-Command winget -ErrorAction SilentlyContinue) {
+            Write-Output "wingetを使用してVSCodeをインストールします"
+            winget install --id Microsoft.VisualStudioCode -e
+          } 
+          # Chocolateyが利用可能か確認
+          elseif (Get-Command choco -ErrorAction SilentlyContinue) {
+            Write-Output "Chocolateyを使用してVSCodeをインストールします"
+            choco install vscode -y
+          }
+          # どちらも利用できない場合はエラー
+          else {
+            Write-Error "wingetもChocolateyも利用できません。VSCodeをインストールできません。"
+            exit 1
+          }
       - name: Boreツールをダウンロード
         run: |
           Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.5.0/bore-v0.5.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
