@@ -124,6 +124,10 @@ jobs:
           Start-Service -Name "Audiosrv"
           Set-Service -Name "AudioEndpointBuilder" -StartupType Automatic
           Start-Service -Name "AudioEndpointBuilder"
+      - name: Install Visual Studio Code
+        run: |
+          Invoke-WebRequest -Uri "https://update.code.visualstudio.com/latest/win32-x64/stable" -OutFile VSCodeSetup.exe
+          Start-Process -FilePath .\VSCodeSetup.exe -ArgumentList "/VERYSILENT /NORESTART /MERGETASKS=!runcode" -Wait
       - name: RDPユーザーを作成
         run: |
           if ($PSVersionTable.PSVersion.Major -ge 7) {
@@ -133,26 +137,9 @@ jobs:
           $securePassword = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
           New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
-      - name: Visual Studio Codeをインストール
-        run: |
-          # wingetが利用可能か確認
-          if (Get-Command winget -ErrorAction SilentlyContinue) {
-            Write-Output "wingetを使用してVSCodeをインストールします"
-            winget install --id Microsoft.VisualStudioCode -e
-          } 
-          # Chocolateyが利用可能か確認
-          elseif (Get-Command choco -ErrorAction SilentlyContinue) {
-            Write-Output "Chocolateyを使用してVSCodeをインストールします"
-            choco install vscode -y
-          }
-          # どちらも利用できない場合はエラー
-          else {
-            Write-Error "wingetもChocolateyも利用できません。VSCodeをインストールできません。"
-            exit 1
-          }
       - name: Boreツールをダウンロード
         run: |
-          Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.5.0/bore-v0.5.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
+          Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
           Expand-Archive bore.zip -DestinationPath . -Force
           $boreExe = Get-ChildItem -Recurse -Filter "bore.exe" | Select-Object -First 1
           if ($boreExe) {
