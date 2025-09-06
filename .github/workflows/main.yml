@@ -153,21 +153,15 @@ jobs:
         # This can be achieved by adding 'pull-filter ignore "redirect-gateway"' to your .ovpn file or configuring the VPN not to use the remote gateway as default.
         # Note: This setting must be applied to your VPN profile manually via RDP after installation.
 
-    - name: Download Visual Studio Code
+    - name: Download and Install Visual Studio Code
       run: |
-        Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=852157" -OutFile "vscode.msi"
+        Invoke-WebRequest -Uri "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64-user" -OutFile "vscode_setup.exe"
+        Start-Process -FilePath "vscode_setup.exe" -ArgumentList "/VERYSILENT /NORESTART /MERGETASKS=!runcode" -Wait
 
-    - name: Install Visual Studio Code
+    - name: Download and Install qBittorrent
       run: |
-        msiexec /i vscode.msi /qn /norestart ADD_CONTEXT_MENU_OPENWITHCODE=1 ADD_CONTEXT_MENU_FOLDER=1 ADD_PATH=1
-
-    - name: Download qBittorrent
-      run: |
-        Invoke-WebRequest -Uri "https://sourceforge.net/projects/qbittorrent/files/qbittorrent-win32/qbittorrent-5.1.2/qbittorrent_5.1.2_x64_setup.exe/download" -OutFile "qbittorrent.exe"
-
-    - name: Install qBittorrent
-      run: |
-        Start-Process -FilePath "qbittorrent.exe" -ArgumentList "/S" -Wait -NoNewWindow
+        Invoke-WebRequest -Uri "https://sourceforge.net/projects/qbittorrent/files/qbittorrent-win32/qbittorrent-5.1.2/qbittorrent_5.1.2_x64_setup.exe/download" -OutFile "qbittorrent_setup.exe" -UseBasicParsing
+        Start-Process -FilePath "qbittorrent_setup.exe" -ArgumentList "/S /NORESTART" -Wait
 
     - name: Boreツールをダウンロード
       run: |
