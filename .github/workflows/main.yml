@@ -198,23 +198,112 @@ jobs:
             Write-Warning "依存関係の確認に失敗しました: $($_.Exception.Message)"
           }
           
-          # 追加: オーディオデバイスが有効か確認
-          Write-Output "オーディオデバイスの状態を確認します..."
+          Write-Output "オーディオサービスの有効化が完了しました"
+      - name: 仮想オーディオデバイスをインストール
+        run: |
+          Write-Output "仮想オーディオデバイスをインストールします..."
+          
+          # VB-CABLE仮想オーディオデバイスをダウンロード
+          $vbCableUrl = "https://vb-audio.com/Cable/VBCABLE_Driver_Pack43.zip"
+          $vbCableZip = "VBCABLE_Driver_Pack43.zip"
+          $vbCableDir = "VBCABLE"
+          
           try {
-            $audioDevices = Get-WmiObject -Class Win32_SoundDevice -ErrorAction Stop
-            if ($audioDevices) {
-              Write-Output "検出されたオーディオデバイス:"
-              foreach ($device in $audioDevices) {
-                Write-Output "- $($device.Name): $($device.Status)"
+            # ダウンロード
+            Write-Output "VB-CABLEドライバをダウンロード中..."
+            Invoke-WebRequest -Uri $vbCableUrl -OutFile $vbCableZip
+            
+            # 解凍
+            Write-Output "VB-CABLEドライバを解凍中..."
+            Expand-Archive -Path $vbCableZip -DestinationPath $vbCableDir -Force
+            
+            # ドライバをインストール
+            Write-Output "VB-CABLEドライバをインストール中..."
+            $driverPath = Join-Path $vbCableDir "VBCABLE_Setup_x64.exe"
+            if (Test-Path $driverPath) {
+              # サイレントインストールを実行
+              Start-Process -FilePath $driverPath -ArgumentList "/S" -Wait -NoNewWindow
+              Write-Output "VB-CABLEドライバのインストールが完了しました"
+              
+              # ドライバのインストールを反映するために再スキャン
+              Write-Output "デバイスマネージャーでハードウェアの変更をスキャン中..."
+              $devCon = Join-Path $env:windir "System32\devcon.exe"
+              if (Test-Path $devCon) {
+                & $devCon rescan
+              } else {
+                # devconが利用できない場合はPNPUtilを使用
+                $pnpUtil = Join-Path $env:windir "System32\pnputil.exe"
+                if (Test-Path $pnpUtil) {
+                  & $pnpUtil /scan-devices
+                }
+              }
+              
+              # 少し待機してデバイスが認識されるのを待つ
+              Start-Sleep -Seconds 5
+              
+              # オーディオデバイスが検出されたか確認
+              Write-Output "オーディオデバイスの状態を再確認します..."
+              $audioDevices = Get-WmiObject -Class Win32_SoundDevice -ErrorAction SilentlyContinue
+              if ($audioDevices) {
+                Write-Output "検出されたオーディオデバイス:"
+                foreach ($device in $audioDevices) {
+                  Write-Output "- $($device.Name): $($device.Status)"
+                }
+              } else {
+                Write-Warning "オーディオデバイスが検出されませんでした"
               }
             } else {
-              Write-Warning "オーディオデバイスが検出されませんでした"
+              Write-Warning "VB-CABLEドライバのインストーラーが見つかりません: $driverPath"
             }
           } catch {
-            Write-Warning "オーディオデバイスの確認に失敗しました: $($_.Exception.Message)"
+            Write-Warning "仮想オーディオデバイスのインストールに失敗しました: $($_.Exception.Message)"
           }
           
-          Write-Output "オーディオサービスの有効化が完了しました"
+          # VB-CABLEのインストールに失敗した場合の代替手段
+          if (-not (Get-WmiObject -Class Win32_SoundDevice -ErrorAction SilentlyContinue)) {
+            Write-Output "代替手段としてWindows標準のオーディオドライバを有効化します..."
+            
+            # Windows Audio Serviceを再起動
+            Write-Output "Windows Audio Serviceを再起動します..."
+            Restart-Service -Name "Audiosrv" -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 3
+            
+            # オーディオサービスを再確認
+            $audioServices = @("Audiosrv", "AudioEndpointBuilder")
+            foreach ($serviceName in $audioServices) {
+              $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+              if ($service) {
+                Write-Output "$($service.DisplayName) の状態: $($service.Status)"
+                if ($service.Status -ne "Running") {
+                  try {
+                    Start-Service -Name $serviceName -ErrorAction Stop
+                    Write-Output "$($service.DisplayName) を再起動しました"
+                  } catch {
+                    Write-Warning "$($service.DisplayName) の再起動に失敗しました"
+                  }
+                }
+              }
+            }
+            
+            # レジストリで仮想オーディオデバイスを強制有効化
+            Write-Output "レジストリで仮想オーディオデバイスを有効化します..."
+            $audioKeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\Render"
+            if (Test-Path $audioKeyPath) {
+              $devices = Get-ChildItem -Path $audioKeyPath
+              foreach ($device in $devices) {
+                $deviceStatePath = Join-Path $device.PSPath "DeviceState"
+                if (Test-Path $deviceStatePath) {
+                  $deviceState = Get-ItemProperty -Path $deviceStatePath
+                  if ($deviceState.DeviceState -ne 1) {
+                    Set-ItemProperty -Path $deviceStatePath -Name "DeviceState" -Value 1 -Type DWORD -Force
+                    Write-Output "デバイス $($device.PSChildName) を有効化しました"
+                  }
+                }
+              }
+            }
+          }
+          
+          Write-Output "仮想オーディオデバイスのインストールが完了しました"
       - name: RDPユーザーを作成
         run: |
           if ($PSVersionTable.PSVersion.Major -ge 7) {
