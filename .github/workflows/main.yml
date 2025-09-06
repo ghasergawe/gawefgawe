@@ -30,9 +30,6 @@ jobs:
         Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableCursorSetting" -value 1 -Type DWORD -Force
         Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "PerfDisableVSync" -value 1 -Type DWORD -Force
         netsh int tcp set global autotuninglevel=normal
-        netsh int tcp set global chimney=enabled
-        netsh int tcp set global dca=enabled
-        netsh int tcp set global netdma=enabled
         netsh int tcp set global congestionprovider=ctcp
         netsh interface ipv4 set subinterface "Ethernet" mtu=1500 store=persistent
         Set-Service -Name "SysMain" -StartupType Disabled
@@ -58,7 +55,6 @@ jobs:
         netsh int tcp set global ecncapability=enabled
         netsh int tcp set global timestamps=disabled # 低レイテンシのため
         netsh int tcp set global rsc=enabled
-        netsh int ip set global taskoffload=enabled
         netsh int tcp set global initialRto=300 # 再送信タイムアウトをさらに短くしてラグ減少 (reduced to 300ms)
         netsh int tcp set global fastopen=enabled
         # 圧縮レベルを最小化
@@ -120,15 +116,19 @@ jobs:
         Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
     - name: VSCodeをインストール
       run: |
-        winget install --id Microsoft.VisualStudioCode --source winget --exact --accept-package-agreements --accept-source-agreements --silent
+        $Url = "https://update.code.visualstudio.com/latest/win32-x64-user/stable"
+        $Installer = "VSCodeSetup.exe"
+        Invoke-WebRequest -Uri $Url -OutFile $Installer
+        Start-Process -FilePath $Installer -ArgumentList "/VERYSILENT", "/MERGETASKS=!runcode" -Wait -NoNewWindow
+        Remove-Item $Installer -Force
     - name: Boreツールをダウンロード
       run: |
-        Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.5.0/bore-v0.5.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
+        Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
         Expand-Archive bore.zip -DestinationPath . -Force
         if (Test-Path "bore\bore.exe") {
           Move-Item -Path "bore\bore.exe" -Destination .
-        } elseif (Test-Path "bore-v0.5.0-x86_64-pc-windows-msvc\bore.exe") {
-          Move-Item -Path "bore-v0.5.0-x86_64-pc-windows-msvc\bore.exe" -Destination .
+        } elseif (Test-Path "bore-v0.6.0-x86_64-pc-windows-msvc\bore.exe") {
+          Move-Item -Path "bore-v0.6.0-x86_64-pc-windows-msvc\bore.exe" -Destination .
         } elseif (Test-Path "bore.exe") {
           Write-Output "bore.exeはすでにカレントディレクトリに存在します"
         } else {
