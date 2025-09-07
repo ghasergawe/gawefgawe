@@ -183,3 +183,4 @@ jobs:
           Start-Sleep -Seconds 60
           Write-Output "$(Get-Date): RDP接続を維持中..."
         }
+        
