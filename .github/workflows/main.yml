@@ -126,6 +126,42 @@ jobs:
         $securePassword = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
         New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
         Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
+    - name: Download and Install VSCode
+      run: |
+        # VSCodeの最新バージョンをダウンロード（システムインストーラ）
+        $vscodeUrl = "https://update.code.visualstudio.com/latest/win32-x64-system/stable"
+        $vscodeInstaller = "VSCodeSetup-x64.exe"
+        Invoke-WebRequest -Uri $vscodeUrl -OutFile $vscodeInstaller
+        
+        # サイレントインストールを実行（デスクトップショートカットを作成）
+        Start-Process -FilePath ".\$vscodeInstaller" -ArgumentList "/VERYSILENT /MERGETASKS=!runcode" -Wait
+        
+        # インストール完了後、デスクトップにショートカットが作成されたか確認
+        $desktopPath = [Environment]::GetFolderPath("Desktop")
+        $vscodeShortcut = Join-Path $desktopPath "Visual Studio Code.lnk"
+        
+        # ショートカットが存在しない場合は手動で作成
+        if (-not (Test-Path $vscodeShortcut)) {
+          $programFilesPath = [Environment]::GetFolderPath("ProgramFiles")
+          $vscodeExePath = Join-Path $programFilesPath "Microsoft VS Code\Code.exe"
+          
+          if (Test-Path $vscodeExePath) {
+            $shell = New-Object -ComObject WScript.Shell
+            $shortcut = $shell.CreateShortcut($vscodeShortcut)
+            $shortcut.TargetPath = $vscodeExePath
+            $shortcut.WorkingDirectory = Split-Path $vscodeExePath
+            $shortcut.Description = "Visual Studio Code"
+            $shortcut.Save()
+            Write-Output "VSCodeショートカットをデスクトップに作成しました"
+          } else {
+            Write-Warning "VSCodeの実行ファイルが見つかりませんでした"
+          }
+        } else {
+          Write-Output "VSCodeショートカットは既にデスクトップに存在します"
+        }
+        
+        # インストーラファイルを削除
+        Remove-Item -Path ".\$vscodeInstaller" -Force
     - name: Download OpenVPN Connect
       run: |
         Invoke-WebRequest -Uri "https://openvpn.net/downloads/openvpn-connect-v3-windows.msi" -OutFile "openvpn-connect.msi"
@@ -135,12 +171,6 @@ jobs:
         # To prevent RDP disconnection when connecting to VPN, ensure your OpenVPN profile uses split tunneling.
         # This can be achieved by adding 'pull-filter ignore "redirect-gateway"' to your .ovpn file or configuring the VPN not to use the remote gateway as default.
         # Note: This setting must be applied to your VPN profile manually via RDP after installation.
-    - name: Download Visual Studio Code
-      run: |
-        Invoke-WebRequest -Uri "https://update.code.visualstudio.com/latest/win32-x64-user/stable" -OutFile "VSCodeSetup.exe"
-    - name: Install Visual Studio Code
-      run: |
-        Start-Process -FilePath ".\VSCodeSetup.exe" -ArgumentList "/VERYSILENT /NORESTART /MERGETASKS=desktopicon" -Wait
     - name: Boreツールをダウンロード
       run: |
         # 2025/9/7現在の最新バージョン v0.6.0 を使用（実際の最新を確認）
