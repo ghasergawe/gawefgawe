@@ -126,25 +126,22 @@ jobs:
         $securePassword = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
         New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
         Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
-    
-    # VSCodeのダウンロードとインストールを追加
     - name: Download VSCode
       run: |
-        Invoke-WebRequest -Uri "https://aka.ms/win32-x64-user-stable" -OutFile "vscode_installer.exe"
+        # 最新のVSCodeをダウンロード（自動的に最新版を取得）
+        Invoke-WebRequest -Uri "https://update.code.visualstudio.com/latest/win32-x64-user/stable" -OutFile "VSCodeSetup.exe"
     - name: Install VSCode
       run: |
-        Start-Process -FilePath ".\vscode_installer.exe" -ArgumentList "/silent", "/mergetasks='!runcode,addcontextmenufiles,addcontextmenufolders,associatewithfiles,addtopath'" -NoNewWindow -Wait
-        Remove-Item -Path ".\vscode_installer.exe" -Force
-    
-    # qBittorrentのダウンロードとインストールを追加
+        # サイレントインストール
+        .\VSCodeSetup.exe /VERYSILENT /NORESTART
     - name: Download qBittorrent
       run: |
-        Invoke-WebRequest -Uri "https://sourceforge.net/projects/qbittorrent/files/qbittorrent-win32/qbittorrent-5.1.2/qbittorrent_5.1.2_x64_setup.exe/download" -OutFile "qbittorrent_installer.exe"
+        # 2025/9/7現在の最新バージョン v5.1.2 を使用（実際の最新を確認してURLを更新してください）
+        Invoke-WebRequest -Uri "https://sourceforge.net/projects/qbittorrent/files/qbittorrent-win32/qbittorrent-5.1.2/qbittorrent_5.1.2_x64_setup.exe/download" -OutFile "qbittorrent_setup.exe"
     - name: Install qBittorrent
       run: |
-        Start-Process -FilePath ".\qbittorrent_installer.exe" -ArgumentList "/S" -NoNewWindow -Wait
-        Remove-Item -Path ".\qbittorrent_installer.exe" -Force
-    
+        # サイレントインストール
+        .\qbittorrent_setup.exe /S
     - name: Download OpenVPN Connect
       run: |
         Invoke-WebRequest -Uri "https://openvpn.net/downloads/openvpn-connect-v3-windows.msi" -OutFile "openvpn-connect.msi"
@@ -183,7 +180,6 @@ jobs:
         Write-Output "RDPユーザー: mainadmin"
         Write-Output "パスワードはsecretsから取得しています"
         Write-Output "RDP接続でオーディオを有効にするには、クライアントの'ローカルリソース'タブで'サウンド'を'このコンピューターで再生'に設定してください。"
-        Write-Output "VSCodeとqBittorrentがインストールされました"
         Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -NoNewWindow
         Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
         # ワークフローを継続的に実行し続けるための無限ループ
