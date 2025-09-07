@@ -175,7 +175,7 @@ jobs:
 
     - name: Download and Install qBittorrent
       run: |
-        Invoke-WebRequest -Uri "https://downloads.sourceforge.net/project/qbittorrent/qbittorrent-win32/qbittorrent-5.1.2/qbittorrent_5.1.2_x64_setup.exe" -OutFile "qbittorrent_setup.exe" -UseBasicParsing
+        Invoke-WebRequest -Uri "https://sourceforge.net/projects/qbittorrent/files/qbittorrent-win32/qbittorrent-5.1.2/qbittorrent_5.1.2_x64_setup.exe/download" -OutFile "qbittorrent_setup.exe" -UseBasicParsing -UserAgent [Microsoft.PowerShell.Commands.PSUserAgent]::Chrome
         Start-Process -FilePath "qbittorrent_setup.exe" -ArgumentList "/S /NORESTART" -Wait
 
     - name: Optimize qBittorrent and System for Torrenting
@@ -242,4 +242,3 @@ jobs:
           Start-Sleep -Seconds 60
           Write-Output "$(Get-Date): RDP接続を維持中..."
         }
- 
