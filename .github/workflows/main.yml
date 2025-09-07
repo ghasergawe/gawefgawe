@@ -129,7 +129,7 @@ jobs:
     - name: Download and Install VSCode
       run: |
         # VSCodeの最新バージョンをダウンロード（システムインストーラ）
-        $vscodeUrl = "https://update.code.visualstudio.com/latest/win32-x64-system/stable"
+        $vscodeUrl = "https://update.code.visualstudio.com/latest/win32-x64/stable"
         $vscodeInstaller = "VSCodeSetup-x64.exe"
         Invoke-WebRequest -Uri $vscodeUrl -OutFile $vscodeInstaller
         
