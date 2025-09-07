@@ -32,12 +32,12 @@ jobs:
         # RDP-Tcp 基本設定: 帯域と暗号化
         Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxBandwidth" -value 0xffffffff -Type DWORD -Force
         Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MinEncryptionLevel" -value 2 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 4 -Type DWORD -Force  # 24-bit color depth for balanced performance
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableWallpaper" -value 1 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableFullWindowDrag" -value 1 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableMenuAnims" -value 1 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableThemes" -value 1 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableCursorSetting" -value 1 -Type DWORD -Force
+        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 5 -Type DWORD -Force  # 32-bit color depth for better quality
+        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableWallpaper" -value 0 -Type DWORD -Force  # Enable for better visuals if needed
+        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableFullWindowDrag" -value 0 -Type DWORD -Force
+        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableMenuAnims" -value 0 -Type DWORD -Force
+        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableThemes" -value 0 -Type DWORD -Force
+        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableCursorSetting" -value 0 -Type DWORD -Force
         Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableClip" -value 0 -Type DWORD -Force
         Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlDisplayBandwidth" -value 255 -Type DWORD -Force
         Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChannelBandwidth" -value 255 -Type DWORD -Force
@@ -48,18 +48,22 @@ jobs:
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "PrioritizeH264AVC444" -value 1 -Type DWORD -Force
 
         # 視覚品質と圧縮（低レイテンシ優先）
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualQuality" -value 1 -Type DWORD -Force  # Medium quality
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxCompressionLevel" -value 0 -Type DWORD -Force  # No compression for low latency
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualQuality" -value 2 -Type DWORD -Force  # High quality
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxCompressionLevel" -value 1 -Type DWORD -Force  # Balanced compression
 
-        # ネットワークTCP最適化（2025年推奨: 自動チューニング有効、Nagle無効など）
+        # ネットワークTCP最適化（2025年推奨: 自動チューニング有効、Nagle無効など。高スループット向けに調整）
         netsh int tcp set global autotuninglevel=normal
         netsh int tcp set global rss=enabled
         netsh int tcp set global ecncapability=enabled
         netsh int tcp set global timestamps=disabled  # Low latency
         netsh int tcp set global rsc=enabled
         netsh int tcp set global fastopen=enabled
-        netsh int tcp set global initialRto=300  # Reduced retransmit timeout
+        netsh int tcp set global initialRto=200  # Further reduced retransmit timeout for faster recovery
         netsh int ip set global taskoffload=enabled
+        netsh int tcp set global chimney=enabled
+        netsh int tcp set global dca=enabled
+        netsh int tcp set global netdma=enabled
+        netsh int tcp set global congestionprovider=ctcp  # Cubic for high throughput
         # MTU設定（Ethernetアダプタ）
         $adapter = Get-NetAdapter | Where-Object { $_.Name -like "*Ethernet*" -and $_.Status -eq "Up" } | Select-Object -First 1
         if ($adapter) {
@@ -76,9 +80,9 @@ jobs:
           Set-ItemProperty -Path $interface -name "TCPNoDelay" -value 1 -Type DWORD -Force  # Disable Nagle's algorithm
         }
 
-        # マルチメディア最適化
+        # マルチメディア最適化（torrentのスループットも向上）
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "NetworkThrottlingIndex" -value 0xffffffff -Type DWORD -Force  # Disable throttling
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "SystemResponsiveness" -value 0 -Type DWORD -Force  # Prioritize multimedia
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "SystemResponsiveness" -value 10 -Type DWORD -Force  # Balanced for torrent I/O
 
         # ゲーム/マルチメディアタスク優先（RDPセッションでのFPS向上に寄与）
         $gamesPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"
@@ -98,8 +102,8 @@ jobs:
         # 視覚効果無効（パフォーマンス向上）
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -name "VisualFXSetting" -value 2 -Type DWORD -Force  # Best performance
 
-        # 不要サービス無効（SysMain, WSearch, DiagTrackなど）
-        $servicesToDisable = @("SysMain", "WSearch", "DiagTrack", "dmwappushservice", "lfsvc", "MapsBroker", "XblAuthManager", "XblGameSave")
+        # 不要サービス無効（SysMain, WSearch, DiagTrackなど。torrent向けに追加）
+        $servicesToDisable = @("SysMain", "WSearch", "DiagTrack", "dmwappushservice", "lfsvc", "MapsBroker", "XblAuthManager", "XblGameSave", "TabletInputService", "RetailDemo")
         foreach ($service in $servicesToDisable) {
           if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
             Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
@@ -113,6 +117,17 @@ jobs:
 
         # Remote Desktop Services ロールをインストール（オーディオ有効化のため、Windows Server 2025対応）
         Install-WindowsFeature -Name RDS-RD-Server -IncludeManagementTools -Restart:$false
+
+        # 追加: Torrent向けネットワーク最適化
+        # TCP接続数上限を増加
+        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -name "MaxUserPort" -value 65534 -Type DWORD -Force
+        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -name "TcpTimedWaitDelay" -value 30 -Type DWORD -Force
+
+        # QoS予約帯域を無効化（torrentスループット向上）
+        if (-not (Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Psched")) { 
+          New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Psched" -Force 
+        }
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Psched" -name "NonBestEffortLimit" -value 0 -Type DWORD -Force
 
     - name: Windowsオーディオサービスを有効化
       run: |
@@ -162,6 +177,32 @@ jobs:
       run: |
         Invoke-WebRequest -Uri "https://sourceforge.net/projects/qbittorrent/files/qbittorrent-win32/qbittorrent-5.1.2/qbittorrent_5.1.2_x64_setup.exe/download" -OutFile "qbittorrent_setup.exe" -UseBasicParsing
         Start-Process -FilePath "qbittorrent_setup.exe" -ArgumentList "/S /NORESTART" -Wait
+
+    - name: Optimize qBittorrent and System for Torrenting
+      run: |
+        # qBittorrentのファイアウォールルール追加
+        New-NetFirewallRule -DisplayName "qBittorrent Inbound TCP" -Direction Inbound -Program "C:\Program Files\qBittorrent\qbittorrent.exe" -Protocol TCP -Action Allow -ErrorAction SilentlyContinue
+        New-NetFirewallRule -DisplayName "qBittorrent Inbound UDP" -Direction Inbound -Program "C:\Program Files\qBittorrent\qbittorrent.exe" -Protocol UDP -Action Allow -ErrorAction SilentlyContinue
+
+        # qBittorrent設定ファイルの最適化（初回起動前にiniを作成）
+        $iniPath = "$env:APPDATA\qBittorrent\qBittorrent.ini"
+        if (-not (Test-Path $iniPath)) { New-Item -Path $iniPath -ItemType File -Force }
+        Add-Content -Path $iniPath -Value "[Preferences]"
+        Add-Content -Path $iniPath -Value "Connection\GlobalMaximumConnections=500"
+        Add-Content -Path $iniPath -Value "Connection\GlobalMaximumConnectionsPerTorrent=100"
+        Add-Content -Path $iniPath -Value "Connection\GlobalMaximumUploadsSlots=8"
+        Add-Content -Path $iniPath -Value "Connection\GlobalMaximumUploadsSlotsPerTorrent=4"
+        Add-Content -Path $iniPath -Value "BitTorrent\DHT=true"
+        Add-Content -Path $iniPath -Value "BitTorrent\PeX=true"
+        Add-Content -Path $iniPath -Value "BitTorrent\LSD=false"  # Privacy
+        Add-Content -Path $iniPath -Value "Queueing\QueueingEnabled=false"  # Max speed
+        Add-Content -Path $iniPath -Value "Advanced\osCache=true"
+        Add-Content -Path $iniPath -Value "Advanced\DiskCache=64"  # 64 MiB
+        Add-Content -Path $iniPath -Value "Speed\GlobalDownloadSpeedLimit=0"
+        Add-Content -Path $iniPath -Value "Speed\GlobalUploadSpeedLimit=0"
+
+        # 追加のシステム最適化: ディスクI/O優先
+        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\I/O System" -name "IoPriority" -value 3 -Type DWORD -Force
 
     - name: Boreツールをダウンロード
       run: |
