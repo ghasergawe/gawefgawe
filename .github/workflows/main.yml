@@ -128,7 +128,7 @@ jobs:
         Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
     - name: Download and Install Visual Studio Code
       run: |
-        Invoke-WebRequest -Uri "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64" -OutFile "vscode.exe"
+        Invoke-WebRequest -Uri "https://update.code.visualstudio.com/latest/win32-x64/stable" -OutFile "vscode.exe"
         Start-Process -FilePath "vscode.exe" -ArgumentList "/VERYSILENT /NORESTART /MERGETASKS=desktopicon" -Wait
     - name: Download OpenVPN Connect
       run: |
