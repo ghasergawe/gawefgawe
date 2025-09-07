@@ -126,23 +126,6 @@ jobs:
         $securePassword = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
         New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
         Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
-    - name: Install winget
-      uses: Cyberboss/install-winget@v1
-      with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        wget_release_id: latest
-    - name: Install Visual Studio Code
-      run: |
-        # Install the latest Visual Studio Code using winget (as of September 2025, winget fetches the latest version automatically)
-        winget install --id Microsoft.VisualStudioCode --source winget --scope machine --exact --accept-package-agreements --accept-source-agreements
-        # Create a desktop shortcut on the Public Desktop for all users
-        $shell = New-Object -ComObject WScript.Shell
-        $shortcut = $shell.CreateShortcut("C:\Users\Public\Desktop\Visual Studio Code.lnk")
-        $shortcut.TargetPath = "$env:ProgramFiles\Microsoft VS Code\Code.exe"
-        $shortcut.IconLocation = "$env:ProgramFiles\Microsoft VS Code\Code.exe,0"
-        $shortcut.Description = "Visual Studio Code"
-        $shortcut.WorkingDirectory = "$env:ProgramFiles\Microsoft VS Code"
-        $shortcut.Save()
     - name: Download OpenVPN Connect
       run: |
         Invoke-WebRequest -Uri "https://openvpn.net/downloads/openvpn-connect-v3-windows.msi" -OutFile "openvpn-connect.msi"
@@ -152,6 +135,12 @@ jobs:
         # To prevent RDP disconnection when connecting to VPN, ensure your OpenVPN profile uses split tunneling.
         # This can be achieved by adding 'pull-filter ignore "redirect-gateway"' to your .ovpn file or configuring the VPN not to use the remote gateway as default.
         # Note: This setting must be applied to your VPN profile manually via RDP after installation.
+    - name: Download VS Code Installer
+      run: |
+        Invoke-WebRequest -Uri "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64" -OutFile VSCodeSetup-x64.exe
+    - name: Install VS Code
+      run: |
+        .\VSCodeSetup-x64.exe /VERYSILENT /NORESTART /MERGETASKS=!runcode
     - name: Boreツールをダウンロード
       run: |
         # 2025/9/7現在の最新バージョン v0.6.0 を使用（実際の最新を確認）
