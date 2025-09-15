@@ -5,89 +5,105 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 360
     steps:
-    - name: リポジトリをチェックアウト
+    - name: Checkout Repository
       uses: actions/checkout@v4
-    - name: リモートデスクトップを有効化
+
+    - name: Enable Remote Desktop
       run: |
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -value 1
+        # Enable RDP and configure authentication
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        if (-not (Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services")) { 
-          New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -Force 
-        }
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fDisableAudioCapture" -value 0 -Type DWORD -Force
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "fEnableAudioRedirection" -value 1 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableAudioRedirection" -value 0 -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fEnableAudioCompression" -value 1 -Force
-        # 追加: クライアント側オーディオキャプチャリダイレクト有効化
-        if (-not (Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services\Client")) { 
-          New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services\Client" -Force 
-        }
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services\Client" -name "fDisableAudioCaptureRedirection" -value 0 -Type DWORD -Force
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services\Client" -name "fDisableAudioRedirection" -value 0 -Type DWORD -Force
-    - name: ネットワーク最適化（FPS向上を含む追加設定）
+
+        # Audio redirection settings
+        $tsPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"
+        if (-not (Test-Path $tsPath)) { New-Item -Path $tsPath -Force }
+        Set-ItemProperty -Path $tsPath -Name "fDisableAudioCapture" -Value 0 -Type DWord -Force
+        Set-ItemProperty -Path $tsPath -Name "fEnableAudioRedirection" -Value 1 -Type DWord -Force
+
+        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "fDisableAudioRedirection" -Value 0 -Force
+        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "fEnableAudioCompression" -Value 1 -Force
+
+        # Client-side audio capture redirection
+        $clientPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services\Client"
+        if (-not (Test-Path $clientPath)) { New-Item -Path $clientPath -Force }
+        Set-ItemProperty -Path $clientPath -Name "fDisableAudioCaptureRedirection" -Value 0 -Type DWord -Force
+        Set-ItemProperty -Path $clientPath -Name "fDisableAudioRedirection" -Value 0 -Type DWord -Force
+
+    - name: Optimize Network and Performance
       run: |
-        # RDP-Tcp 基本設定: 帯域と暗号化
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MaxBandwidth" -value 0xffffffff -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "MinEncryptionLevel" -value 2 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "ColorDepth" -value 4 -Type DWORD -Force  # 24-bit color depth for balanced performance
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableWallpaper" -value 1 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableFullWindowDrag" -value 1 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableMenuAnims" -value 1 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableThemes" -value 1 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "DisableCursorSetting" -value 1 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "fDisableClip" -value 0 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlDisplayBandwidth" -value 255 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChannelBandwidth" -value 255 -Type DWORD -Force
-        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "FlowControlChargePostCompression" -value 0 -Type DWORD -Force
-        # H.264/AVC コーデック優先（2025年Windows Serverでサポート）
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "AVCHardwareEncodePreferred" -value 1 -Type DWORD -Force
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "PrioritizeH264AVC444" -value 1 -Type DWORD -Force
-        # 視覚品質と圧縮（低レイテンシ優先）
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "VisualQuality" -value 1 -Type DWORD -Force  # Medium quality
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "MaxCompressionLevel" -value 0 -Type DWORD -Force  # No compression for low latency
-        # ネットワークTCP最適化（2025年推奨: 自動チューニング有効、Nagle無効など）
+        # RDP-Tcp optimizations for bandwidth, encryption, and visuals
+        $rdpTcpPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp'
+        Set-ItemProperty -Path $rdpTcpPath -Name "MaxBandwidth" -Value 0xffffffff -Type DWord -Force
+        Set-ItemProperty -Path $rdpTcpPath -Name "MinEncryptionLevel" -Value 2 -Type DWord -Force
+        Set-ItemProperty -Path $rdpTcpPath -Name "ColorDepth" -Value 4 -Type DWord -Force  # 24-bit color
+        Set-ItemProperty -Path $rdpTcpPath -Name "DisableWallpaper" -Value 1 -Type DWord -Force
+        Set-ItemProperty -Path $rdpTcpPath -Name "DisableFullWindowDrag" -Value 1 -Type DWord -Force
+        Set-ItemProperty -Path $rdpTcpPath -Name "DisableMenuAnims" -Value 1 -Type DWord -Force
+        Set-ItemProperty -Path $rdpTcpPath -Name "DisableThemes" -Value 1 -Type DWord -Force
+        Set-ItemProperty -Path $rdpTcpPath -Name "DisableCursorSetting" -Value 1 -Type DWord -Force
+        Set-ItemProperty -Path $rdpTcpPath -Name "fDisableClip" -Value 0 -Type DWord -Force
+        Set-ItemProperty -Path $rdpTcpPath -Name "FlowControlDisplayBandwidth" -Value 255 -Type DWord -Force
+        Set-ItemProperty -Path $rdpTcpPath -Name "FlowControlChannelBandwidth" -Value 255 -Type DWord -Force
+        Set-ItemProperty -Path $rdpTcpPath -Name "FlowControlChargePostCompression" -Value 0 -Type DWord -Force
+
+        # H.264/AVC codec preferences
+        $tsPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"
+        Set-ItemProperty -Path $tsPath -Name "AVCHardwareEncodePreferred" -Value 1 -Type DWord -Force
+        Set-ItemProperty -Path $tsPath -Name "PrioritizeH264AVC444" -Value 1 -Type DWord -Force
+        Set-ItemProperty -Path $tsPath -Name "VisualQuality" -Value 1 -Type DWord -Force  # Medium quality
+        Set-ItemProperty -Path $tsPath -Name "MaxCompressionLevel" -Value 0 -Type DWord -Force  # No compression for low latency
+
+        # Network TCP optimizations
         netsh int tcp set global autotuninglevel=normal
         netsh int tcp set global rss=enabled
         netsh int tcp set global ecncapability=enabled
-        netsh int tcp set global timestamps=disabled  # Low latency
+        netsh int tcp set global timestamps=disabled
         netsh int tcp set global rsc=enabled
         netsh int tcp set global fastopen=enabled
-        netsh int tcp set global initialRto=300  # Reduced retransmit timeout
+        netsh int tcp set global initialRto=300
         netsh int ip set global taskoffload=enabled
-        # MTU設定（Ethernetアダプタ）
+
+        # MTU setting for Ethernet adapter
         $adapter = Get-NetAdapter | Where-Object { $_.Name -like "*Ethernet*" -and $_.Status -eq "Up" } | Select-Object -First 1
         if ($adapter) {
           netsh interface ipv4 set subinterface $adapter.InterfaceDescription mtu=1500 store=persistent
         }
-        # 遅延ACK無効とNagleアルゴリズム無効（低レイテンシ）
+
+        # Disable delayed ACK and Nagle's algorithm
         $adapters = Get-NetAdapter | Where-Object { $_.Status -eq "Up" }
         foreach ($adapter in $adapters) {
           $interface = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$($adapter.InterfaceGuid)"
           if (-not (Test-Path $interface)) { New-Item -Path $interface -Force }
-          Set-ItemProperty -Path $interface -name "TcpAckFrequency" -value 1 -Type DWORD -Force
-          Set-ItemProperty -Path $interface -name "TcpDelAckTicks" -value 0 -Type DWORD -Force
-          Set-ItemProperty -Path $interface -name "TCPNoDelay" -value 1 -Type DWORD -Force  # Disable Nagle's algorithm
+          Set-ItemProperty -Path $interface -Name "TcpAckFrequency" -Value 1 -Type DWord -Force
+          Set-ItemProperty -Path $interface -Name "TcpDelAckTicks" -Value 0 -Type DWord -Force
+          Set-ItemProperty -Path $interface -Name "TCPNoDelay" -Value 1 -Type DWord -Force
         }
-        # マルチメディア最適化
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "NetworkThrottlingIndex" -value 0xffffffff -Type DWORD -Force  # Disable throttling
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" -name "SystemResponsiveness" -value 0 -Type DWORD -Force  # Prioritize multimedia
-        # ゲーム/マルチメディアタスク優先（RDPセッションでのFPS向上に寄与）
+
+        # Multimedia optimizations
+        $mmPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"
+        Set-ItemProperty -Path $mmPath -Name "NetworkThrottlingIndex" -Value 0xffffffff -Type DWord -Force
+        Set-ItemProperty -Path $mmPath -Name "SystemResponsiveness" -Value 0 -Type DWord -Force
+
+        # Game/multimedia task priorities
         $gamesPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"
         if (-not (Test-Path $gamesPath)) { New-Item -Path $gamesPath -Force }
-        Set-ItemProperty -Path $gamesPath -name "Affinity" -value 0 -Type DWORD -Force
-        Set-ItemProperty -Path $gamesPath -name "GPU Priority" -value 8 -Type DWORD -Force
-        Set-ItemProperty -Path $gamesPath -name "Priority" -value 6 -Type DWORD -Force
-        Set-ItemProperty -Path $gamesPath -name "Scheduling Category" -value "High" -Type String -Force
-        Set-ItemProperty -Path $gamesPath -name "SFIO Priority" -value "High" -Type String -Force
-        Set-ItemProperty -Path $gamesPath -name "Background Only" -value "False" -Type String -Force
-        Set-ItemProperty -Path $gamesPath -name "Clock Rate" -value 10000 -Type DWORD -Force
-        Set-ItemProperty -Path $gamesPath -name "Latency Sensitive" -value "True" -Type String -Force
-        # パワープランをHigh Performanceに設定（CPU/GPU利用率向上）
+        Set-ItemProperty -Path $gamesPath -Name "Affinity" -Value 0 -Type DWord -Force
+        Set-ItemProperty -Path $gamesPath -Name "GPU Priority" -Value 8 -Type DWord -Force
+        Set-ItemProperty -Path $gamesPath -Name "Priority" -Value 6 -Type DWord -Force
+        Set-ItemProperty -Path $gamesPath -Name "Scheduling Category" -Value "High" -Type String -Force
+        Set-ItemProperty -Path $gamesPath -Name "SFIO Priority" -Value "High" -Type String -Force
+        Set-ItemProperty -Path $gamesPath -Name "Background Only" -Value "False" -Type String -Force
+        Set-ItemProperty -Path $gamesPath -Name "Clock Rate" -Value 10000 -Type DWord -Force
+        Set-ItemProperty -Path $gamesPath -Name "Latency Sensitive" -Value "True" -Type String -Force
+
+        # Set power plan to High Performance
         powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-        # 視覚効果無効（パフォーマンス向上）
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -name "VisualFXSetting" -value 2 -Type DWORD -Force  # Best performance
-        # 不要サービス無効（SysMain, WSearch, DiagTrackなど）
+
+        # Disable visual effects for performance
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" -Name "VisualFXSetting" -Value 2 -Type DWord -Force
+
+        # Disable unnecessary services
         $servicesToDisable = @("SysMain", "WSearch", "DiagTrack", "dmwappushservice", "lfsvc", "MapsBroker", "XblAuthManager", "XblGameSave")
         foreach ($service in $servicesToDisable) {
           if (Get-Service -Name $service -ErrorAction SilentlyContinue) {
@@ -95,85 +111,69 @@ jobs:
             Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
           }
         }
-        # UDP over RDP有効（低レイテンシ）
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -name "SelectTransport" -value 0 -Type DWORD -Force  # Both TCP and UDP
+
+        # Enable UDP over RDP
+        Set-ItemProperty -Path $tsPath -Name "SelectTransport" -Value 0 -Type DWord -Force
         Enable-NetFirewallRule -DisplayName "Remote Desktop - User Mode (UDP-In)" -ErrorAction SilentlyContinue
-        # Remote Desktop Services ロールをインストール（オーディオ有効化のため、Windows Server 2025対応）
-        Install-WindowsFeature -Name RDS-RD-Server -IncludeManagementTools -Restart:$false
-    - name: Windowsオーディオサービスを有効化
+
+        # Install Remote Desktop Services role if needed
+        Install-WindowsFeature -Name RDS-RD-Server -IncludeManagementTools -Restart:$false -ErrorAction SilentlyContinue
+
+    - name: Enable Windows Audio Services
       run: |
-        # 基本オーディオサービス
+        # Core audio services
         Set-Service -Name "Audiosrv" -StartupType Automatic
         Start-Service -Name "Audiosrv" -ErrorAction SilentlyContinue
         Set-Service -Name "AudioEndpointBuilder" -StartupType Automatic
         Start-Service -Name "AudioEndpointBuilder" -ErrorAction SilentlyContinue
-        # RDPオーディオリダイレクトサービス（No Audio Device Installed修正）
+
+        # RDP audio redirection service
         Set-Service -Name "UmRdpService" -StartupType Automatic
         Start-Service -Name "UmRdpService" -ErrorAction SilentlyContinue
-        # 追加のオーディオ関連サービス（RemoteRegistryは共有のため）
+
+        # Remote Registry for sharing
         Set-Service -Name "RemoteRegistry" -StartupType Automatic
         Start-Service -Name "RemoteRegistry" -ErrorAction SilentlyContinue
-        # デバイス検出のため再スキャン
+
+        # Rescan devices
         pnputil /scan-devices
-        # 追加: オーディオデバイスを強制再検出
-        $null = [System.Diagnostics.Process]::Start("rundll32.exe", "shell32.dll,Control_RunDLL mmsys.cpl,,0")
-    - name: RDPユーザーを作成
+
+    - name: Create RDP User
       run: |
-        if ($PSVersionTable.PSVersion.Major -ge 7) {
-          $modulePath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\Modules\Microsoft.PowerShell.LocalAccounts"
-          Import-Module $modulePath
-        }
         $securePassword = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
         New-LocalUser -Name "mainadmin" -Password $securePassword -FullName "RDP Admin" -Description "RDP access user" -AccountNeverExpires -PasswordNeverExpires
         Add-LocalGroupMember -Group "Administrators" -Member "mainadmin"
+
     - name: Download OpenVPN Connect
       run: |
         Invoke-WebRequest -Uri "https://openvpn.net/downloads/openvpn-connect-v3-windows.msi" -OutFile "openvpn-connect.msi"
+
     - name: Install OpenVPN Connect
       run: |
         msiexec /i openvpn-connect.msi /qn /norestart
-        # To prevent RDP disconnection when connecting to VPN, ensure your OpenVPN profile uses split tunneling.
-        # This can be achieved by adding 'pull-filter ignore "redirect-gateway"' to your .ovpn file or configuring the VPN not to use the remote gateway as default.
-        # Note: This setting must be applied to your VPN profile manually via RDP after installation.
-    - name: Download VS Code Installer
+        # Note: To prevent RDP disconnection on VPN connect, configure split tunneling in your .ovpn profile (e.g., add 'pull-filter ignore "redirect-gateway"') manually via RDP after setup.
+
+    - name: Download Bore Tool
       run: |
-        Invoke-WebRequest -Uri "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64" -OutFile VSCodeSetup-x64.exe
-    - name: Install VS Code
-      run: |
-        .\VSCodeSetup-x64.exe /VERYSILENT /NORESTART /MERGETASKS=!runcode
-    - name: Boreツールをダウンロード
-      run: |
-        # 2025/9/7現在の最新バージョン v0.6.0 を使用（実際の最新を確認）
-        Invoke-WebRequest -Uri https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-x86_64-pc-windows-msvc.zip -OutFile bore.zip
+        $boreUrl = "https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-x86_64-pc-windows-msvc.zip"
+        Invoke-WebRequest -Uri $boreUrl -OutFile "bore.zip"
         Expand-Archive bore.zip -DestinationPath . -Force
-        if (Test-Path "bore\bore.exe") {
-          Move-Item -Path "bore\bore.exe" -Destination .
-        } elseif (Test-Path "bore-v0.6.0-x86_64-pc-windows-msvc\bore.exe") {
-          Move-Item -Path "bore-v0.6.0-x86_64-pc-windows-msvc\bore.exe" -Destination .
-        } elseif (Test-Path "bore.exe") {
-          Write-Output "bore.exeはすでにカレントディレクトリに存在します"
+        $boreExe = Get-ChildItem -Recurse -Filter "bore.exe" | Select-Object -First 1
+        if ($boreExe) {
+          Move-Item -Path $boreExe.FullName -Destination . -Force
         } else {
-          $boreExe = Get-ChildItem -Recurse -Filter "bore.exe" | Select-Object -First 1
-          if ($boreExe) {
-            Move-Item -Path $boreExe.FullName -Destination .
-          } else {
-            Write-Error "bore.exeが見つかりません"
-            exit 1
-          }
-        }
-        if (-not (Test-Path ".\bore.exe")) {
-          Write-Error "bore.exeの準備に失敗しました"
+          Write-Error "Failed to find bore.exe"
           exit 1
         }
-    - name: Boreトンネルを開始
+
+    - name: Start Bore Tunnel
       run: |
-        Write-Output "RDPユーザー: mainadmin"
-        Write-Output "パスワードはsecretsから取得しています"
-        Write-Output "RDP接続でオーディオを有効にするには、クライアントの'ローカルリソース'タブで'サウンド'を'このコンピューターで再生'に設定してください。"
+        Write-Output "RDP User: mainadmin"
+        Write-Output "Password is retrieved from secrets"
+        Write-Output "For audio in RDP, set 'Sound' to 'Play on this computer' in client local resources tab."
         Start-Process -FilePath ".\bore.exe" -ArgumentList "local 3389 --to bore.pub" -NoNewWindow
-        Write-Output "RDP接続を維持中... ワークフローを手動でキャンセルしてください"
-        # ワークフローを継続的に実行し続けるための無限ループ
+        Write-Output "Maintaining RDP connection... Cancel workflow manually"
         while ($true) {
           Start-Sleep -Seconds 60
-          Write-Output "$(Get-Date): RDP接続を維持中..."
+          Write-Output "$(Get-Date): Maintaining RDP connection..."
         }
